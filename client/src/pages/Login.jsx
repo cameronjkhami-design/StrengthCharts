@@ -17,8 +17,8 @@ export default function Login() {
     e.preventDefault();
     setError('');
 
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-      setError('PIN must be exactly 4 digits');
+    if (pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+      setError('PIN must be exactly 6 digits');
       return;
     }
 
@@ -77,12 +77,12 @@ export default function Login() {
           <div>
             <input
               type="tel"
-              placeholder="4-Digit PIN"
+              placeholder="6-Digit PIN"
               value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               className="input-field text-center tracking-[0.5em] text-2xl font-display"
               inputMode="numeric"
-              maxLength={4}
+              maxLength={6}
               required
             />
           </div>

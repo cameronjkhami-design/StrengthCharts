@@ -72,7 +72,12 @@
       "Bash(export PATH=\"/opt/homebrew/bin:/usr/bin:/usr/local/bin:$PATH\")",
       "Bash(git init:*)",
       "Bash(export PATH=\"/opt/homebrew/bin:/Users/cameronkhami/.local/node/bin:/usr/bin:/usr/local/bin:$PATH\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh repo:*)",
+      "Bash(TURSO_DATABASE_URL=\"libsql://strengthcharts-cameronk.aws-us-east-2.turso.io\" TURSO_AUTH_TOKEN=\"eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzM4NzE2OTEsImlkIjoiMDE5ZDAyZmQtMmYwMS03ZDVkLTljMGEtOTEyYmUzNDExOWNjIiwicmlkIjoiYmQ2ZDU0MDEtYzUyMy00NTcxLThhYWYtZWU0N2ZjNzkyMzFiIn0.PMQKnF8fAjx_iDUkScxiD3MVKYTKB8QgKmwr-TwH3FDwUIC6Du9lUJPmrdYOAxACRc-HjBcI4DfGeVjTdUq5Aw\" node server/seed.js)",
+      "Bash(export PATH=\"/opt/homebrew/bin:/Users/cameronkhami/.local/node/bin:/usr/bin:$PATH\")",
+      "Bash(git push:*)"
     ]
   }
 }

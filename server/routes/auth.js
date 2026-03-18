@@ -10,8 +10,8 @@ function hashPin(pin) {
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   const { username, pin, display_name } = req.body;
-  if (!username || !pin || pin.length !== 4) {
-    return res.status(400).json({ error: 'Username and 4-digit PIN required' });
+  if (!username || !pin || pin.length !== 6) {
+    return res.status(400).json({ error: 'Username and 6-digit PIN required' });
   }
 
   const existing = await db.execute({

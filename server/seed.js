@@ -14,9 +14,9 @@ async function seed() {
 
   // Create users
   const users = [
-    { username: 'marcus', pin: '1234', display_name: 'Marcus' },
-    { username: 'sarah', pin: '1234', display_name: 'Sarah' },
-    { username: 'jake', pin: '1234', display_name: 'Jake' },
+    { username: 'marcus', pin: '123456', display_name: 'Marcus' },
+    { username: 'sarah', pin: '123456', display_name: 'Sarah' },
+    { username: 'jake', pin: '123456', display_name: 'Jake' },
   ];
 
   const userIds = [];
@@ -129,7 +129,7 @@ async function seed() {
   }
 
   console.log('Seeded 3 users with lift, bodyweight, and friendship data.');
-  console.log('All users have PIN: 1234');
+  console.log('All users have PIN: 123456');
 }
 
 seed().catch(err => {
