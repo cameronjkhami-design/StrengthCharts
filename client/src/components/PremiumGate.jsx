@@ -42,8 +42,8 @@ export default function PremiumGate({ featureId, children, blurContent = false }
 
             <p className="text-gray-400 text-sm mb-4">
               {isNative
-                ? 'Watch a short ad to unlock for 24h, or go Pro for permanent access.'
-                : 'Upgrade to Pro in the iOS app to unlock this feature.'}
+                ? 'Watch a short ad to unlock for 24h, or subscribe to Pro for $2.99/mo.'
+                : 'Subscribe to Pro for $2.99/mo to unlock this feature.'}
             </p>
 
             <div className="flex flex-col gap-2">

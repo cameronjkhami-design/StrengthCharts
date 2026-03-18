@@ -60,7 +60,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="px-4 pt-6 pb-4 max-w-lg mx-auto">
+    <div className="px-4 pt-6 pb-4">
       {/* Header */}
       <div className="flex justify-between items-start mb-6">
         <div>

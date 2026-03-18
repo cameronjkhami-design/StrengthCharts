@@ -14,17 +14,19 @@ function ProtectedLayout() {
   if (!user) return <Navigate to="/login" replace />;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-dark-900 safe-top">
-      <div className="flex-1 overflow-y-auto overscroll-none pb-4">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/log" element={<LogPR />} />
-          <Route path="/lifts" element={<MyLifts />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes>
+    <div className="fixed inset-0 flex justify-center bg-black">
+      <div className="w-full max-w-lg flex flex-col bg-dark-900 safe-top sm:border-x sm:border-dark-600">
+        <div className="flex-1 overflow-y-auto overscroll-none pb-4">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/log" element={<LogPR />} />
+            <Route path="/lifts" element={<MyLifts />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </div>
+        <BottomNav />
       </div>
-      <BottomNav />
     </div>
   );
 }

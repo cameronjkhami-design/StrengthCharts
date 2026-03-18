@@ -72,7 +72,7 @@ export default function LogPR() {
     : null;
 
   return (
-    <div className="px-4 pt-6 pb-4 max-w-lg mx-auto">
+    <div className="px-4 pt-6 pb-4">
       <h1 className="font-display font-extrabold text-3xl text-white mb-6">LOG PR</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">

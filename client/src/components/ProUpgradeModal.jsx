@@ -2,8 +2,8 @@ import { usePurchases } from '../hooks/usePurchases';
 import { usePremium } from '../context/PremiumContext';
 
 const FEATURES = [
+  'Friend leaderboard — compete with your crew',
   'Strength-to-bodyweight ratio trend charts',
-  'Full leaderboard access (all ranks)',
   'Export your PR data',
   'Overlay multiple exercise charts',
   'No ads — ever',
@@ -37,6 +37,9 @@ export default function ProUpgradeModal({ isOpen, onClose }) {
           </div>
           <p className="text-gray-400 text-sm">
             Unlock the full power of your training data.
+          </p>
+          <p className="text-primary font-display font-bold text-lg mt-2">
+            $2.99/month
           </p>
         </div>
 

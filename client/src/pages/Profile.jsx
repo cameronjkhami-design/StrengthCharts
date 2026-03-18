@@ -142,7 +142,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="px-4 pt-6 pb-4 max-w-lg mx-auto">
+    <div className="px-4 pt-6 pb-4">
       <div className="flex items-center gap-3 mb-6">
         <h1 className="font-display font-extrabold text-3xl text-white">PROFILE</h1>
         {isPremium && (
@@ -158,7 +158,7 @@ export default function Profile() {
           <div className="flex justify-between items-center">
             <div>
               <p className="font-display font-bold text-white uppercase">Go Pro</p>
-              <p className="text-gray-400 text-xs">Unlock all features, remove ads</p>
+              <p className="text-gray-400 text-xs">$2.99/mo — unlock all features</p>
             </div>
             <button
               onClick={() => setShowUpgradeModal(true)}

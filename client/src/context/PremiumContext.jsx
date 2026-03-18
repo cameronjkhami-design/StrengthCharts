@@ -5,7 +5,7 @@ const PremiumContext = createContext(null);
 
 // Feature IDs for gating
 export const PREMIUM_FEATURES = {
-  FULL_LEADERBOARD: 'full_leaderboard',
+  FRIEND_LEADERBOARD: 'friend_leaderboard',
   STRENGTH_BW_RATIO_CHART: 'strength_bw_ratio_chart',
   EXPORT_PR_DATA: 'export_pr_data',
   OVERLAY_CHARTS: 'overlay_charts',

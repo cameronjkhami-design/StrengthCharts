@@ -37,7 +37,8 @@ export default function Login() {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center px-6 overflow-hidden bg-dark-900">
+    <div className="fixed inset-0 flex justify-center bg-black overflow-hidden">
+    <div className="w-full max-w-lg flex flex-col items-center justify-center px-6 bg-dark-900 sm:border-x sm:border-dark-600">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
@@ -103,6 +104,7 @@ export default function Login() {
           {isSignup ? 'Already have an account? Log in' : "Don't have an account? Sign up"}
         </button>
       </div>
+    </div>
     </div>
   );
 }
