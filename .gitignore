@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+*.db
+*.db-shm
+*.db-wal
+client/ios/
+ios-assets/
+.env
+.vercel/
+client/dist/

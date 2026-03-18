@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "strengthcharts-dev",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export PATH=/Users/cameronkhami/.local/node/bin:$PATH && npx concurrently 'PORT=3001 node server/index.js' 'cd client && npx vite --host --port 5173'"],
+      "port": 5173
+    }
+  ]
+}

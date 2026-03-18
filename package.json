@@ -1,0 +1,22 @@
+{
+  "name": "strengthcharts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "cd client && npx vite --host",
+    "build": "cd client && npm install && npx vite build",
+    "seed": "node server/seed.js"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "concurrently": "^9.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}
