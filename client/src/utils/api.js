@@ -50,7 +50,10 @@ export const api = {
 
   // Friends
   getFriends: (userId) => request(`/friends/${userId}`),
-  searchUsers: (userId, q) => request(`/friends/${userId}/search?q=${encodeURIComponent(q)}`),
+  getPendingRequests: (userId) => request(`/friends/${userId}/pending`),
+  searchUsers: (userId, q) => request(`/friends/search?userId=${userId}&q=${encodeURIComponent(q)}`),
   addFriend: (user_id, friend_id) => request('/friends', { method: 'POST', body: JSON.stringify({ user_id, friend_id }) }),
+  acceptFriend: (user_id, friend_id) => request('/friends/accept', { method: 'PUT', body: JSON.stringify({ user_id, friend_id }) }),
+  declineFriend: (user_id, friend_id) => request('/friends/decline', { method: 'PUT', body: JSON.stringify({ user_id, friend_id }) }),
   removeFriend: (user_id, friend_id) => request('/friends', { method: 'DELETE', body: JSON.stringify({ user_id, friend_id }) }),
 };

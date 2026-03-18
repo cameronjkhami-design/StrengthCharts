@@ -38,7 +38,7 @@ router.get('/:userId/prs', async (req, res) => {
 
   const prMap = {};
   for (const log of result.rows) {
-    const e1rm = log.weight_kg * (1 + log.reps / 30);
+    const e1rm = log.reps === 1 ? log.weight_kg : log.weight_kg * (1 + log.reps / 30);
     if (!prMap[log.exercise_name] || e1rm > prMap[log.exercise_name].estimated_1rm) {
       prMap[log.exercise_name] = {
         ...log,

@@ -3,9 +3,21 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
 import { inputToKg } from '../utils/conversions';
 import { DEFAULT_EXERCISES } from '../utils/benchmarks';
+import { useNotification } from '../context/NotificationContext';
+
+function triggerHeavyHaptic() {
+  if (window.Capacitor?.isNativePlatform()) {
+    import('@capacitor/haptics').then(({ Haptics, ImpactStyle }) => {
+      Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+    }).catch(() => {});
+  } else if (navigator.vibrate) {
+    navigator.vibrate(50);
+  }
+}
 
 export default function LogPR() {
   const { user } = useAuth();
+  const { addNotification } = useNotification();
   const unit = user?.unit_pref || 'lbs';
 
   const [exercise, setExercise] = useState('');
@@ -53,6 +65,8 @@ export default function LogPR() {
         notes: notes || null,
       });
       setSuccess(true);
+      triggerHeavyHaptic();
+      addNotification(`${selectedExercise} PR logged!`, 'success');
       setWeight('');
       setReps('');
       setNotes('');
@@ -68,7 +82,7 @@ export default function LogPR() {
   const weightNum = parseFloat(weight);
   const repsNum = parseInt(reps);
   const e1rmPreview = !isNaN(weightNum) && !isNaN(repsNum) && repsNum > 0
-    ? Math.round(weightNum * (1 + repsNum / 30) * 10) / 10
+    ? Math.round((repsNum === 1 ? weightNum : weightNum * (1 + repsNum / 30)) * 10) / 10
     : null;
 
   return (

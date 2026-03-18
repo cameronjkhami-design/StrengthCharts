@@ -41,33 +41,27 @@ export default function PremiumGate({ featureId, children, blurContent = false }
             </div>
 
             <p className="text-gray-400 text-sm mb-4">
-              {isNative
-                ? 'Watch a short ad to unlock for 24h, or subscribe to Pro for $2.99/mo.'
-                : 'Subscribe to Pro for $2.99/mo to unlock this feature.'}
+              Watch a short ad to unlock for 24h, or subscribe to Pro for $2.99/mo.
             </p>
 
             <div className="flex flex-col gap-2">
-              {isNative && (
-                <button
-                  onClick={handleWatchAd}
-                  disabled={!adLoaded || adLoading}
-                  className="btn-secondary text-sm flex items-center justify-center gap-2"
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-primary">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                  {adLoading ? 'Loading Ad...' : adLoaded ? 'Watch Ad to Unlock (24h)' : 'Ad Loading...'}
-                </button>
-              )}
+              <button
+                onClick={handleWatchAd}
+                disabled={!adLoaded || adLoading}
+                className="btn-secondary text-sm flex items-center justify-center gap-2"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-primary">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                {adLoading ? 'Loading Ad...' : 'Watch Ad to Unlock (24h)'}
+              </button>
 
-              {isNative && (
-                <button
-                  onClick={() => setShowUpgrade(true)}
-                  className="btn-primary text-sm"
-                >
-                  Go Pro — Unlock Everything
-                </button>
-              )}
+              <button
+                onClick={() => setShowUpgrade(true)}
+                className="btn-primary text-sm"
+              >
+                Go Pro — $2.99/mo
+              </button>
             </div>
           </div>
         </div>

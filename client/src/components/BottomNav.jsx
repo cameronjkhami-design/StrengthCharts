@@ -1,5 +1,15 @@
 import { NavLink } from 'react-router-dom';
 
+function triggerHaptic() {
+  if (window.Capacitor?.isNativePlatform()) {
+    import('@capacitor/haptics').then(({ Haptics, ImpactStyle }) => {
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+    }).catch(() => {});
+  } else if (navigator.vibrate) {
+    navigator.vibrate(10);
+  }
+}
+
 const tabs = [
   { path: '/', label: 'Dashboard', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6">
@@ -31,12 +41,13 @@ const tabs = [
 export default function BottomNav() {
   return (
     <nav className="bg-dark-800 border-t border-dark-600 safe-bottom flex-shrink-0">
-      <div className="flex items-center h-16 max-w-lg mx-auto">
+      <div className="flex items-center h-16">
         {tabs.map((tab, idx) => (
           <div key={tab.path} className="flex items-center flex-1 h-full">
             <NavLink
               to={tab.path}
               end={tab.path === '/'}
+              onClick={triggerHaptic}
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center gap-0.5 w-full h-full transition-colors ${
                   isActive ? 'text-primary' : 'text-gray-500'

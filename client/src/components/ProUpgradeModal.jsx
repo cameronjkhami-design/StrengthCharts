@@ -3,6 +3,8 @@ import { usePremium } from '../context/PremiumContext';
 
 const FEATURES = [
   'Friend leaderboard — compete with your crew',
+  'Bodyweight trendline chart',
+  'Achievements & profile badges',
   'Strength-to-bodyweight ratio trend charts',
   'Export your PR data',
   'Overlay multiple exercise charts',

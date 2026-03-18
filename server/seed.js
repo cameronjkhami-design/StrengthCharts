@@ -123,7 +123,7 @@ async function seed() {
   ];
   for (const [a, b] of friendPairs) {
     await db.execute({
-      sql: 'INSERT INTO friendships (user_id, friend_id) VALUES (?, ?)',
+      sql: "INSERT INTO friendships (user_id, friend_id, status) VALUES (?, ?, 'accepted')",
       args: [a, b]
     });
   }

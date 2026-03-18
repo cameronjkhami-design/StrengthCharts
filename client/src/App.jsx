@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PremiumProvider } from './context/PremiumContext';
+import { NotificationProvider } from './context/NotificationContext';
 import BottomNav from './components/BottomNav';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -35,12 +36,14 @@ export default function App() {
   return (
     <AuthProvider>
       <PremiumProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/*" element={<ProtectedLayout />} />
-          </Routes>
-        </BrowserRouter>
+        <NotificationProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/*" element={<ProtectedLayout />} />
+            </Routes>
+          </BrowserRouter>
+        </NotificationProvider>
       </PremiumProvider>
     </AuthProvider>
   );

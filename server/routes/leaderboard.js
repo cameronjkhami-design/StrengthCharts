@@ -3,6 +3,7 @@ const { db } = require('../db');
 const router = express.Router();
 
 function calcE1RM(weight, reps) {
+  if (reps === 1) return weight;
   return weight * (1 + reps / 30);
 }
 
@@ -13,7 +14,7 @@ router.get('/', async (req, res) => {
 
   if (userId) {
     const friendResult = await db.execute({
-      sql: 'SELECT friend_id FROM friendships WHERE user_id = ?',
+      sql: "SELECT friend_id FROM friendships WHERE user_id = ? AND status = 'accepted'",
       args: [parseInt(userId)]
     });
     const friendIds = friendResult.rows.map(r => r.friend_id);
