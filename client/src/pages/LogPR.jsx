@@ -124,7 +124,7 @@ export default function LogPR() {
     : null;
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 overflow-x-hidden">
       <h1 className="font-display font-extrabold text-3xl text-white mb-6">LOG PR</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -149,11 +149,11 @@ export default function LogPR() {
             className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-2 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
             onClick={() => setWeight(String(suggestion))}
           >
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-primary text-xs font-display font-bold uppercase">Progressive Overload</p>
               <p className="text-gray-300 text-sm">Last: {lastWeight} {unit} — Try <span className="text-primary font-bold">{suggestion} {unit}</span></p>
             </div>
-            <span className="text-primary text-lg">↑</span>
+            <span className="text-primary text-lg ml-2 flex-shrink-0">↑</span>
           </div>
         )}
 
@@ -216,7 +216,8 @@ export default function LogPR() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="input-field"
+            className="input-field w-full box-border"
+            style={{ maxWidth: '100%' }}
           />
         </div>
 
@@ -225,13 +226,13 @@ export default function LogPR() {
           <label className="text-gray-400 text-xs uppercase tracking-wider mb-1 block">
             RPE (optional)
           </label>
-          <div className="flex gap-1.5">
+          <div className="grid grid-cols-9 gap-1">
             {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(val => (
               <button
                 key={val}
                 type="button"
                 onClick={() => setRpe(rpe === String(val) ? '' : String(val))}
-                className={`flex-1 py-2 rounded-lg text-xs font-display font-bold transition-all ${
+                className={`py-2 rounded-lg text-[10px] font-display font-bold transition-all ${
                   rpe === String(val)
                     ? 'bg-primary text-dark-900 scale-105'
                     : 'bg-dark-700 text-gray-400 border border-dark-500'

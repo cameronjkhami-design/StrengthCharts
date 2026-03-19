@@ -40,6 +40,7 @@ export const api = {
   getPRs: (userId) => request(`/lifts/${userId}/prs`),
   logLift: (data) => request('/lifts', { method: 'POST', body: JSON.stringify(data) }),
   deleteLift: (id) => request(`/lifts/${id}`, { method: 'DELETE' }),
+  deleteExerciseLogs: (userId, name) => request(`/lifts/${userId}/exercise/${encodeURIComponent(name)}`, { method: 'DELETE' }),
 
   // Bodyweight
   getBodyweight: (userId) => request(`/bodyweight/${userId}`),

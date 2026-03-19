@@ -56,6 +56,21 @@
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
+
+  /* Prevent horizontal scroll on all page containers */
+  .page-content {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @keyframes slide-down {
@@ -65,4 +80,33 @@
 
 .animate-slide-down {
   animation: slide-down 0.3s ease-out;
+}
+
+/* Page transition */
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-page-in {
+  animation: page-fade-in 0.25s ease-out;
+}
+
+/* Confirmation modal overlay */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-up {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-scale-up {
+  animation: scale-up 0.2s ease-out;
 }

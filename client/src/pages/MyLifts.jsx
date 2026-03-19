@@ -4,14 +4,44 @@ import { PREMIUM_FEATURES } from '../context/PremiumContext';
 import { api } from '../utils/api';
 import { getTier, calcE1RM } from '../utils/benchmarks';
 import { formatWeight, kgToDisplay, formatDate } from '../utils/conversions';
+import { useNotification } from '../context/NotificationContext';
 import TierBadge from '../components/TierBadge';
 import ProgressBar from '../components/ProgressBar';
 import LiftChart from '../components/LiftChart';
 import PremiumGate, { ProTag } from '../components/PremiumGate';
 import StrengthRatioChart from '../components/StrengthRatioChart';
 
+// Confirmation dialog component
+function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6 animate-fade-in" onClick={onCancel}>
+      <div className="absolute inset-0 bg-black/70" />
+      <div
+        className="relative bg-dark-800 border border-dark-600 rounded-2xl p-5 w-full max-w-sm animate-scale-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="font-display font-bold text-lg text-white uppercase mb-2">{title}</h3>
+        <p className="text-gray-400 text-sm mb-5">{message}</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 btn-secondary text-sm py-2.5">
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 bg-red-500 text-white font-display font-bold text-sm px-6 py-2.5 rounded-lg active:scale-95 transition-transform uppercase tracking-wide"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MyLifts() {
   const { user } = useAuth();
+  const { addNotification } = useNotification();
   const unit = user?.unit_pref || 'lbs';
 
   const [exercises, setExercises] = useState([]);
@@ -19,6 +49,10 @@ export default function MyLifts() {
   const [logs, setLogs] = useState([]);
   const [bodyweight, setBodyweight] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Delete states
+  const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'lift'|'category', id, name }
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -76,6 +110,52 @@ export default function MyLifts() {
 
   const rangeOrder = ['1RM', '2-3RM', '4-5RM', '6-8RM', '9+RM'];
 
+  // Delete a single lift
+  const handleDeleteLift = (log) => {
+    setDeleteTarget({
+      type: 'lift',
+      id: log.id,
+      name: `${formatWeight(log.weight_kg, unit)} x ${log.reps}`,
+    });
+    setShowDeleteConfirm(true);
+  };
+
+  // Delete entire category (all logs for an exercise)
+  const handleDeleteCategory = () => {
+    setDeleteTarget({
+      type: 'category',
+      name: selectedExercise,
+    });
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      if (deleteTarget.type === 'lift') {
+        await api.deleteLift(deleteTarget.id);
+        setLogs(prev => prev.filter(l => l.id !== deleteTarget.id));
+        addNotification('Lift deleted', 'info');
+        // If no logs left, remove from exercises
+        if (logs.length <= 1) {
+          setExercises(prev => prev.filter(e => e !== selectedExercise));
+          setSelectedExercise(exercises.find(e => e !== selectedExercise) || null);
+        }
+      } else if (deleteTarget.type === 'category') {
+        // Delete all logs for this exercise via batch endpoint
+        await api.deleteExerciseLogs(user.id, selectedExercise);
+        setExercises(prev => prev.filter(e => e !== selectedExercise));
+        addNotification(`All ${selectedExercise} logs deleted`, 'info');
+        const remaining = exercises.filter(e => e !== selectedExercise);
+        setSelectedExercise(remaining[0] || null);
+        setLogs([]);
+      }
+    } catch (err) {
+      addNotification('Failed to delete', 'error');
+    }
+    setShowDeleteConfirm(false);
+    setDeleteTarget(null);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -85,7 +165,7 @@ export default function MyLifts() {
   }
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 overflow-x-hidden">
       <h1 className="font-display font-extrabold text-3xl text-white mb-4">MY LIFTS</h1>
 
       {exercises.length === 0 ? (
@@ -100,7 +180,7 @@ export default function MyLifts() {
               <button
                 key={ex}
                 onClick={() => setSelectedExercise(ex)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-display font-semibold uppercase tracking-wider transition-colors ${
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-display font-semibold uppercase tracking-wider transition-colors flex-shrink-0 ${
                   selectedExercise === ex
                     ? 'bg-primary text-dark-900'
                     : 'bg-dark-700 text-gray-400 border border-dark-500'
@@ -116,13 +196,13 @@ export default function MyLifts() {
               {/* Stats Card */}
               <div className="card mb-4">
                 <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h2 className="font-display font-bold text-xl uppercase text-white">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-display font-bold text-xl uppercase text-white truncate">
                       {selectedExercise}
                     </h2>
                     {tierInfo && <TierBadge tier={tierInfo.tier} size="sm" />}
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0 ml-2">
                     <p className="font-display font-extrabold text-3xl text-primary">
                       {kgToDisplay(bestE1RM, unit)}
                     </p>
@@ -144,6 +224,18 @@ export default function MyLifts() {
                     sublabel={`${tierInfo.progress}% to ${tierInfo.nextTier}`}
                   />
                 )}
+
+                {/* Delete Category Button */}
+                <button
+                  onClick={handleDeleteCategory}
+                  className="mt-3 text-red-400/60 text-xs font-display font-bold uppercase flex items-center gap-1 hover:text-red-400 transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                  </svg>
+                  Delete All {selectedExercise}
+                </button>
               </div>
 
               {/* Chart */}
@@ -195,14 +287,26 @@ export default function MyLifts() {
                 </h3>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {logs.map(log => (
-                    <div key={log.id} className="flex justify-between items-center py-2 border-b border-dark-600 last:border-0">
-                      <div>
+                    <div key={log.id} className="flex justify-between items-center py-2 border-b border-dark-600 last:border-0 group">
+                      <div className="min-w-0 flex-1">
                         <p className="text-white text-sm font-semibold">
                           {formatWeight(log.weight_kg, unit)} x {log.reps}
+                          {log.rpe && <span className="text-gray-500 text-xs ml-2">RPE {log.rpe}</span>}
                         </p>
-                        {log.notes && <p className="text-gray-500 text-xs">{log.notes}</p>}
+                        {log.notes && <p className="text-gray-500 text-xs truncate">{log.notes}</p>}
                       </div>
-                      <span className="text-gray-500 text-xs">{formatDate(log.logged_at)}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span className="text-gray-500 text-xs">{formatDate(log.logged_at)}</span>
+                        <button
+                          onClick={() => handleDeleteLift(log)}
+                          className="text-gray-600 hover:text-red-400 transition-colors p-1"
+                        >
+                          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -211,6 +315,19 @@ export default function MyLifts() {
           )}
         </>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title={deleteTarget?.type === 'category' ? 'Delete All Logs?' : 'Delete Lift?'}
+        message={
+          deleteTarget?.type === 'category'
+            ? `This will permanently delete all ${deleteTarget?.name} logs. This action cannot be undone.`
+            : `Delete ${deleteTarget?.name}? This action cannot be undone.`
+        }
+        onConfirm={handleConfirmDelete}
+        onCancel={() => { setShowDeleteConfirm(false); setDeleteTarget(null); }}
+      />
     </div>
   );
 }

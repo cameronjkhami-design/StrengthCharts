@@ -41,6 +41,30 @@ export const TIER_THRESHOLDS = {
     { tier: 'Elite', min: 1.0, max: 1.25 },
     { tier: 'World Class', min: 1.25, max: 1.75 },
   ],
+  'Incline DB Press': [
+    { tier: 'Untrained', min: 0, max: 0.15 },
+    { tier: 'Beginner', min: 0.15, max: 0.25 },
+    { tier: 'Intermediate', min: 0.25, max: 0.4 },
+    { tier: 'Advanced', min: 0.4, max: 0.55 },
+    { tier: 'Elite', min: 0.55, max: 0.7 },
+    { tier: 'World Class', min: 0.7, max: 1.0 },
+  ],
+  'Pendulum Squat': [
+    { tier: 'Untrained', min: 0, max: 0.4 },
+    { tier: 'Beginner', min: 0.4, max: 0.65 },
+    { tier: 'Intermediate', min: 0.65, max: 1.0 },
+    { tier: 'Advanced', min: 1.0, max: 1.5 },
+    { tier: 'Elite', min: 1.5, max: 2.0 },
+    { tier: 'World Class', min: 2.0, max: 2.75 },
+  ],
+  'Hack Squat': [
+    { tier: 'Untrained', min: 0, max: 0.5 },
+    { tier: 'Beginner', min: 0.5, max: 0.75 },
+    { tier: 'Intermediate', min: 0.75, max: 1.25 },
+    { tier: 'Advanced', min: 1.25, max: 1.75 },
+    { tier: 'Elite', min: 1.75, max: 2.25 },
+    { tier: 'World Class', min: 2.25, max: 3.0 },
+  ],
 };
 
 export const TIER_COLORS = {
@@ -51,6 +75,9 @@ export const TIER_COLORS = {
   'Elite': '#f59e0b',
   'World Class': '#ef4444',
 };
+
+// Ordered list of tiers for legend display
+export const TIER_ORDER = ['Untrained', 'Beginner', 'Intermediate', 'Advanced', 'Elite', 'World Class'];
 
 export function getTier(exerciseName, ratio) {
   const thresholds = TIER_THRESHOLDS[exerciseName];
@@ -125,5 +152,5 @@ export function getPercentile(exerciseName, ratio) {
   return Math.min(99, Math.max(1, percentile));
 }
 
-export const MAIN_LIFTS = ['Squat', 'Bench Press', 'Deadlift', 'Overhead Press', 'Barbell Row', 'Pull-ups'];
-export const DEFAULT_EXERCISES = ['Squat', 'Bench Press', 'Deadlift', 'Overhead Press', 'Barbell Row', 'Pull-ups'];
+export const MAIN_LIFTS = ['Squat', 'Bench Press', 'Deadlift', 'Overhead Press', 'Barbell Row', 'Pull-ups', 'Incline DB Press', 'Pendulum Squat', 'Hack Squat'];
+export const DEFAULT_EXERCISES = ['Squat', 'Bench Press', 'Deadlift', 'Overhead Press', 'Barbell Row', 'Pull-ups', 'Incline DB Press', 'Pendulum Squat', 'Hack Squat'];

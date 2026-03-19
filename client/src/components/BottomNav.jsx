@@ -11,7 +11,7 @@ function triggerHaptic() {
 }
 
 const tabs = [
-  { path: '/', label: 'Dashboard', icon: (
+  { path: '/', label: 'Home', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6">
       <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
@@ -24,6 +24,11 @@ const tabs = [
   { path: '/lifts', label: 'My Lifts', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6">
       <path d="M6.5 6.5h11M6.5 17.5h11M4 6.5V17.5M20 6.5V17.5M2 9v6M22 9v6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )},
+  { path: '/overview', label: 'Overview', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )},
   { path: '/leaderboard', label: 'Ranks', icon: (
@@ -55,7 +60,7 @@ export default function BottomNav() {
               }
             >
               {tab.icon}
-              <span className="text-[10px] font-semibold uppercase tracking-wider">{tab.label}</span>
+              <span className="text-[9px] font-semibold uppercase tracking-wider">{tab.label}</span>
             </NavLink>
             {idx < tabs.length - 1 && (
               <div className="w-px h-8 bg-dark-600 flex-shrink-0" />

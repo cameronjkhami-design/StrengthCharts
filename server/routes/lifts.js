@@ -76,11 +76,20 @@ router.post('/', async (req, res) => {
   }
 });
 
-// DELETE /api/lifts/:id
+// DELETE /api/lifts/:id — delete a single lift log
 router.delete('/:id', async (req, res) => {
   await db.execute({
     sql: 'DELETE FROM lift_logs WHERE id = ?',
     args: [parseInt(req.params.id)]
+  });
+  res.json({ success: true });
+});
+
+// DELETE /api/lifts/:userId/exercise/:name — delete all logs for an exercise
+router.delete('/:userId/exercise/:name', async (req, res) => {
+  await db.execute({
+    sql: 'DELETE FROM lift_logs WHERE user_id = ? AND exercise_name = ?',
+    args: [parseInt(req.params.userId), req.params.name]
   });
   res.json({ success: true });
 });

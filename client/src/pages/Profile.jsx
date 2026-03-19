@@ -267,7 +267,7 @@ export default function Profile() {
     .filter(Boolean);
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 overflow-x-hidden">
       {/* Profile Header Card */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dark-800 via-dark-800 to-dark-700 border border-dark-600 p-5 mb-5">
         {/* Decorative gradient orb */}

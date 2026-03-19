@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePremium, PREMIUM_FEATURES } from '../context/PremiumContext';
 import { api } from '../utils/api';
-import { getTier, calcE1RM, getPercentile, MAIN_LIFTS } from '../utils/benchmarks';
+import { getTier, calcE1RM, getPercentile, MAIN_LIFTS, TIER_ORDER, TIER_COLORS } from '../utils/benchmarks';
 import { formatWeight, kgToDisplay, formatDateShort } from '../utils/conversions';
 import TierBadge from '../components/TierBadge';
 import ProgressBar from '../components/ProgressBar';
@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [allLogs, setAllLogs] = useState([]);
   const [bodyweight, setBodyweight] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showLegend, setShowLegend] = useState(false);
 
   const unit = user?.unit_pref || 'lbs';
 
@@ -61,7 +62,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 overflow-x-hidden">
       {/* Header */}
       <div className="flex justify-between items-start mb-6">
         <div>
@@ -93,8 +94,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Exercise Comparison Chart (Premium) */}
-      {liftCards.length >= 2 && (
+      {/* Exercise Comparison Chart (Premium) — works with any available lifts */}
+      {liftCards.length >= 1 && (
         <PremiumGate featureId={PREMIUM_FEATURES.OVERLAY_CHARTS} blurContent>
           <div className="card mb-6">
             <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-2 flex items-center gap-2">
@@ -106,18 +107,60 @@ export default function Dashboard() {
         </PremiumGate>
       )}
 
+      {/* Benchmark Legend */}
+      <div className="card mb-4">
+        <button
+          onClick={() => setShowLegend(!showLegend)}
+          className="w-full flex justify-between items-center"
+        >
+          <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
+            Strength Rankings Legend
+          </h3>
+          <svg
+            viewBox="0 0 24 24"
+            className={`w-4 h-4 text-gray-500 transition-transform ${showLegend ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {showLegend && (
+          <div className="mt-3 space-y-2">
+            {TIER_ORDER.map((tier, idx) => {
+              const color = TIER_COLORS[tier];
+              const pctRanges = ['0-20%', '20-40%', '40-65%', '65-85%', '85-97%', '97-100%'];
+              return (
+                <div key={tier} className="flex items-center gap-3">
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-white text-sm font-display font-semibold uppercase flex-1">{tier}</span>
+                  <span className="text-gray-500 text-xs font-display">Top {100 - parseInt(pctRanges[idx])}%</span>
+                </div>
+              );
+            })}
+            <p className="text-gray-600 text-[10px] mt-2 text-center">
+              Rankings based on bodyweight-relative strength (e1RM ÷ BW)
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Lift Summary Cards */}
       <div className="space-y-3">
         {liftCards.map(({ liftName, pr, e1rm, ratio, tierInfo, percentile }) => (
           <div key={liftName} className="card">
             <div className="flex justify-between items-start mb-2">
-              <div>
-                <h3 className="font-display font-bold text-lg uppercase text-white">{liftName}</h3>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-display font-bold text-lg uppercase text-white truncate">{liftName}</h3>
                 <p className="text-gray-500 text-xs">
                   Best: {formatWeight(pr.weight_kg, unit)} x {pr.reps}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="text-right flex-shrink-0 ml-2">
                 <p className="font-display font-extrabold text-2xl text-primary">
                   {kgToDisplay(e1rm, unit)}
                   <span className="text-sm text-gray-400 ml-1">{unit}</span>
@@ -126,7 +169,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <TierBadge tier={tierInfo.tier} size="sm" />
               {bwKg && (
                 <span className="text-gray-500 text-xs">
@@ -154,15 +197,23 @@ export default function Dashboard() {
   );
 }
 
-// Overlay chart component for exercise comparison
+// Overlay chart component for exercise comparison — now works with ANY logged exercises
 function OverlayChart({ logs, unit }) {
-  const CHART_LIFTS = ['Squat', 'Bench Press', 'Deadlift'];
-  const COLORS = { 'Squat': '#FFD700', 'Bench Press': '#3b82f6', 'Deadlift': '#ef4444' };
+  // Dynamically discover which exercises have data
+  const COLORS_PALETTE = ['#FFD700', '#3b82f6', '#ef4444', '#a855f7', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4', '#f97316'];
+  const exerciseSet = new Set();
+  for (const log of logs) {
+    exerciseSet.add(log.exercise_name);
+  }
+  const availableExercises = Array.from(exerciseSet);
+  const COLORS = {};
+  availableExercises.forEach((ex, i) => {
+    COLORS[ex] = COLORS_PALETTE[i % COLORS_PALETTE.length];
+  });
 
   // Group logs by date (monthly) and exercise, compute best e1rm per period
   const byMonth = {};
   for (const log of logs) {
-    if (!CHART_LIFTS.includes(log.exercise_name)) continue;
     const d = new Date(log.logged_at);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (!byMonth[key]) byMonth[key] = {};
@@ -188,7 +239,7 @@ function OverlayChart({ logs, unit }) {
           <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
           <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3a3a3a', borderRadius: 8, fontSize: 12 }} />
           <Legend iconSize={8} wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
-          {CHART_LIFTS.map(lift => (
+          {availableExercises.map(lift => (
             <Line key={lift} type="monotone" dataKey={lift} stroke={COLORS[lift]} strokeWidth={2} dot={{ r: 3 }} connectNulls />
           ))}
         </LineChart>

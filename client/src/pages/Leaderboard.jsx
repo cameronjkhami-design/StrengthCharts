@@ -60,7 +60,7 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 overflow-x-hidden">
       <h1 className="font-display font-extrabold text-3xl text-white mb-4 flex items-center gap-3">
         LEADERBOARD
         <ProTag />
