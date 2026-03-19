@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#FFD700',
+        primary: 'var(--color-primary, #FFD700)',
         dark: {
           900: '#0a0a0a',
           800: '#141414',

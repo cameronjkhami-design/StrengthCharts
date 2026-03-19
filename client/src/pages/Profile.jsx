@@ -10,7 +10,7 @@ import { formatWeight, inputToKg, kgToDisplay, formatDate } from '../utils/conve
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ProUpgradeModal from '../components/ProUpgradeModal';
 import { usePurchases } from '../hooks/usePurchases';
-import { PRIMARY_COLOR } from '../utils/colors';
+import { getPrimaryColor, THEME_COLORS, applyThemeColor } from '../utils/colors';
 
 export default function Profile() {
   const { user, updateUser, logout } = useAuth();
@@ -26,12 +26,8 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  // Friends state
+  // Friends state (count only, management moved to Friends tab)
   const [friends, setFriends] = useState([]);
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
 
   // Achievement state
   const [earnedAchievements, setEarnedAchievements] = useState([]);
@@ -47,26 +43,22 @@ export default function Profile() {
   const [overallPercentile, setOverallPercentile] = useState(null);
 
   // Sections toggle
-  const [showFriends, setShowFriends] = useState(false);
   const [showBWHistory, setShowBWHistory] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
-  const loadFriends = useCallback(() => {
-    api.getFriends(user.id)
-      .then(data => setFriends(data.friends))
-      .catch(console.error);
-  }, [user.id]);
-
-  const loadPending = useCallback(() => {
-    api.getPendingRequests(user.id)
-      .then(data => setPendingRequests(data.requests))
-      .catch(console.error);
-  }, [user.id]);
+  // Privacy settings
+  const [privacySettings, setPrivacySettings] = useState(() => {
+    const ps = user?.privacy_settings;
+    if (typeof ps === 'string') {
+      try { return JSON.parse(ps); } catch { return {}; }
+    }
+    return ps || {};
+  });
 
   useEffect(() => {
     Promise.all([
       api.getBodyweight(user.id).then(data => setBwLogs(data.logs)),
       api.getFriends(user.id).then(data => setFriends(data.friends)),
-      api.getPendingRequests(user.id).then(data => setPendingRequests(data.requests)),
       api.getLifts(user.id).then(data => setAllLifts(data.logs)),
     ])
       .catch(console.error)
@@ -115,75 +107,16 @@ export default function Profile() {
     }
   }, [allLifts, bwLogs, friends, loading]);
 
-  // Debounced search
-  useEffect(() => {
-    if (searchQuery.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    const timer = setTimeout(() => {
-      setSearching(true);
-      api.searchUsers(user.id, searchQuery.trim())
-        .then(data => setSearchResults(data.users))
-        .catch(console.error)
-        .finally(() => setSearching(false));
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery, user.id]);
-
-  const handleSendRequest = async (friendId) => {
+  const handleTogglePrivacy = async (key) => {
+    const updated = { ...privacySettings, [key]: privacySettings[key] === false ? true : false };
+    setPrivacySettings(updated);
     try {
-      const targetUser = searchResults.find(u => u.id === friendId);
-      const name = targetUser?.display_name || targetUser?.username || 'User';
-      const result = await api.addFriend(user.id, friendId);
-      if (result.status === 'accepted') {
-        loadFriends();
-        setSearchResults(prev => prev.map(u =>
-          u.id === friendId ? { ...u, friend_status: 'accepted' } : u
-        ));
-        addNotification(`You and ${name} are now friends!`, 'friend');
-      } else {
-        setSearchResults(prev => prev.map(u =>
-          u.id === friendId ? { ...u, friend_status: 'pending_sent' } : u
-        ));
-        addNotification(`Friend request sent to ${name}`, 'friend');
-      }
+      const data = await api.updateUser(user.id, { privacy_settings: updated });
+      updateUser(data.user);
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  const handleAcceptRequest = async (friendId) => {
-    try {
-      const req = pendingRequests.find(r => r.id === friendId);
-      const name = req?.display_name || req?.username || 'User';
-      await api.acceptFriend(user.id, friendId);
-      setPendingRequests(prev => prev.filter(r => r.id !== friendId));
-      loadFriends();
-      addNotification(`${name} added as friend!`, 'friend');
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleDeclineRequest = async (friendId) => {
-    try {
-      await api.declineFriend(user.id, friendId);
-      setPendingRequests(prev => prev.filter(r => r.id !== friendId));
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleRemoveFriend = async (friendId) => {
-    try {
-      await api.removeFriend(user.id, friendId);
-      setFriends(prev => prev.filter(f => f.id !== friendId));
-      setSearchResults(prev => prev.map(u =>
-        u.id === friendId ? { ...u, friend_status: 'none' } : u
-      ));
-    } catch (err) {
-      console.error(err);
+      // Revert on error
+      setPrivacySettings(privacySettings);
     }
   };
 
@@ -380,59 +313,51 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Pending Friend Requests */}
-      {pendingRequests.length > 0 && (
-        <div className="card mb-3 border-primary/30 bg-primary/5">
-          <h3 className="font-display font-bold text-sm uppercase text-primary mb-3 flex items-center gap-2">
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-              <circle cx="8.5" cy="7" r="4" />
-              <line x1="20" y1="8" x2="20" y2="14" />
-              <line x1="23" y1="11" x2="17" y2="11" />
-            </svg>
-            Friend Requests ({pendingRequests.length})
-          </h3>
-          <div className="space-y-1">
-            {pendingRequests.map(req => (
-              <div key={req.id} className="flex items-center justify-between py-2 px-3 bg-dark-700 rounded-lg">
-                <div>
-                  <p className="text-white text-sm font-display font-semibold uppercase">
-                    {req.display_name || req.username}
-                  </p>
-                  <p className="text-gray-500 text-xs">@{req.username}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleAcceptRequest(req.id)}
-                    className="bg-primary text-dark-900 text-xs font-display font-bold uppercase px-3 py-1.5 rounded-lg"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleDeclineRequest(req.id)}
-                    className="text-gray-400 text-xs font-display font-bold uppercase px-3 py-1.5 border border-dark-500 rounded-lg"
-                  >
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Theme Color */}
+      <div className="card mb-3">
+        <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-3">Theme Color</h3>
+        <div className="flex gap-3 flex-wrap">
+          {THEME_COLORS.map(({ name, value }) => (
+            <button
+              key={value}
+              onClick={async () => {
+                applyThemeColor(value);
+                try {
+                  const data = await api.updateUser(user.id, { theme_color: value });
+                  updateUser(data.user);
+                } catch (err) {
+                  console.error(err);
+                  applyThemeColor(user.theme_color);
+                }
+              }}
+              className={`w-10 h-10 rounded-full border-2 transition-transform active:scale-90 ${
+                (user.theme_color || '#FFD700') === value
+                  ? 'border-white scale-110'
+                  : 'border-dark-500'
+              }`}
+              style={{ backgroundColor: value }}
+              title={name}
+            />
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* Friends Section — Collapsible */}
+      {/* Privacy Settings — Collapsible */}
       <div className="card mb-3">
         <button
-          onClick={() => setShowFriends(!showFriends)}
+          onClick={() => setShowPrivacy(!showPrivacy)}
           className="w-full flex justify-between items-center"
         >
           <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
-            Friends ({friends.length})
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            Friend Visibility
           </h3>
           <svg
             viewBox="0 0 24 24"
-            className={`w-4 h-4 text-gray-500 transition-transform ${showFriends ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-gray-500 transition-transform ${showPrivacy ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             strokeWidth={2}
@@ -441,97 +366,32 @@ export default function Profile() {
           </svg>
         </button>
 
-        {showFriends && (
-          <div className="mt-3">
-            {/* Search */}
-            <div className="mb-3">
-              <input
-                type="text"
-                placeholder="Search users to add..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input-field text-sm"
-              />
-            </div>
-
-            {/* Search Results */}
-            {searchQuery.trim().length >= 2 && (
-              <div className="mb-3 space-y-1">
-                {searching && <p className="text-gray-500 text-xs text-center py-2">Searching...</p>}
-                {!searching && searchResults.length === 0 && (
-                  <p className="text-gray-500 text-xs text-center py-2">No users found</p>
-                )}
-                {searchResults.map(u => (
-                  <div key={u.id} className="flex items-center justify-between py-2 px-3 bg-dark-700 rounded-lg">
-                    <div>
-                      <p className="text-white text-sm font-display font-semibold uppercase">
-                        {u.display_name || u.username}
-                      </p>
-                      <p className="text-gray-500 text-xs">@{u.username}</p>
-                    </div>
-                    {u.friend_status === 'accepted' ? (
-                      <button
-                        onClick={() => handleRemoveFriend(u.id)}
-                        className="text-red-400 text-xs font-display font-bold uppercase px-3 py-1.5 border border-red-400/30 rounded-lg"
-                      >
-                        Remove
-                      </button>
-                    ) : u.friend_status === 'pending_sent' ? (
-                      <span className="text-gray-400 text-xs font-display font-bold uppercase px-3 py-1.5 border border-dark-500 rounded-lg">
-                        Pending
-                      </span>
-                    ) : u.friend_status === 'pending_received' ? (
-                      <button
-                        onClick={() => handleAcceptRequest(u.id)}
-                        className="bg-primary text-dark-900 text-xs font-display font-bold uppercase px-3 py-1.5 rounded-lg"
-                      >
-                        Accept
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleSendRequest(u.id)}
-                        className="bg-primary text-dark-900 text-xs font-display font-bold uppercase px-3 py-1.5 rounded-lg"
-                      >
-                        Add
-                      </button>
-                    )}
-                  </div>
-                ))}
+        {showPrivacy && (
+          <div className="mt-3 space-y-2">
+            <p className="text-gray-500 text-xs mb-3">Choose what friends can see on your profile</p>
+            {[
+              { key: 'show_prs', label: 'Personal Records', desc: 'PRs, tier badges, and percentiles' },
+              { key: 'show_lifts', label: 'Lift History', desc: 'Progress charts and exercise logs' },
+              { key: 'show_bodyweight', label: 'Bodyweight', desc: 'Current weight and trend chart' },
+              { key: 'show_achievements', label: 'Achievements', desc: 'Earned badges and showcase' },
+            ].map(({ key, label, desc }) => (
+              <div key={key} className="flex items-center justify-between py-2 px-3 bg-dark-700 rounded-lg">
+                <div>
+                  <p className="text-white text-sm font-display font-semibold">{label}</p>
+                  <p className="text-gray-500 text-[10px]">{desc}</p>
+                </div>
+                <button
+                  onClick={() => handleTogglePrivacy(key)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${
+                    privacySettings[key] !== false ? 'bg-primary' : 'bg-dark-500'
+                  }`}
+                >
+                  <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                    privacySettings[key] !== false ? 'translate-x-5' : 'translate-x-0.5'
+                  }`} />
+                </button>
               </div>
-            )}
-
-            {/* Current Friends */}
-            {friends.length > 0 ? (
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                {friends.map(friend => (
-                  <div key={friend.id} className="flex items-center justify-between py-2 px-3 bg-dark-700 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-dark-600 flex items-center justify-center">
-                        <span className="font-display font-bold text-xs text-gray-400">
-                          {(friend.display_name || friend.username || '?')[0].toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-white text-sm font-display font-semibold uppercase">
-                          {friend.display_name || friend.username}
-                        </p>
-                        <p className="text-gray-500 text-xs">@{friend.username}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveFriend(friend.id)}
-                      className="text-red-400 text-xs font-display font-bold uppercase px-3 py-1.5 border border-red-400/30 rounded-lg"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-xs text-center py-2">
-                No friends yet. Search above to add some!
-              </p>
-            )}
+            ))}
           </div>
         )}
       </div>
@@ -583,9 +443,9 @@ export default function Profile() {
                 <Line
                   type="monotone"
                   dataKey="weight"
-                  stroke={PRIMARY_COLOR}
+                  stroke={getPrimaryColor()}
                   strokeWidth={2}
-                  dot={{ fill: PRIMARY_COLOR, r: 3 }}
+                  dot={{ fill: getPrimaryColor(), r: 3 }}
                 />
               </LineChart>
             </ResponsiveContainer>

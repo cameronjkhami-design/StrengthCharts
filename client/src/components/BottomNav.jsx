@@ -31,9 +31,11 @@ const tabs = [
       <path d="M22 12h-4l-3 9L9 3l-3 9H2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )},
-  { path: '/leaderboard', label: 'Ranks', icon: (
+  { path: '/friends', label: 'Friends', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6">
-      <path d="M8 21V11M16 21V5M12 21V15M4 21h16" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="9" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )},
   { path: '/profile', label: 'Profile', icon: (

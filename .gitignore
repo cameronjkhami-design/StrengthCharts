@@ -8,3 +8,4 @@ ios-assets/
 .env
 .vercel/
 client/dist/
+.vercel

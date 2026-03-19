@@ -1,6 +1,7 @@
-import { PRIMARY_COLOR } from '../utils/colors';
+import { getPrimaryColor } from '../utils/colors';
 
-export default function ProgressBar({ progress, color = PRIMARY_COLOR, label, sublabel }) {
+export default function ProgressBar({ progress, color, label, sublabel }) {
+  const barColor = color || getPrimaryColor();
   return (
     <div className="w-full">
       {(label || sublabel) && (
@@ -12,7 +13,7 @@ export default function ProgressBar({ progress, color = PRIMARY_COLOR, label, su
       <div className="w-full h-2 bg-dark-600 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${Math.min(100, progress)}%`, backgroundColor: color }}
+          style={{ width: `${Math.min(100, progress)}%`, backgroundColor: barColor }}
         />
       </div>
     </div>

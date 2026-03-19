@@ -8,7 +8,7 @@ import TierBadge from '../components/TierBadge';
 import ProgressBar from '../components/ProgressBar';
 import PremiumGate, { ProTag } from '../components/PremiumGate';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
-import { PRIMARY_COLOR } from '../utils/colors';
+import { getPrimaryColor } from '../utils/colors';
 
 export default function Overview() {
   const { user } = useAuth();
@@ -184,7 +184,7 @@ export default function Overview() {
                 <XAxis dataKey="week" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} />
                 <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3a3a3a', borderRadius: 8, fontSize: 12 }} />
-                <Line type="monotone" dataKey="volume" stroke={PRIMARY_COLOR} strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="volume" stroke={getPrimaryColor()} strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

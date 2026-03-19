@@ -80,6 +80,16 @@ async function initDb() {
   } catch (e) {
     // Column already exists — ignore
   }
+  try {
+    await db.execute({ sql: "ALTER TABLE users ADD COLUMN privacy_settings TEXT DEFAULT '{}'", args: [] });
+  } catch (e) {
+    // Column already exists — ignore
+  }
+  try {
+    await db.execute({ sql: "ALTER TABLE users ADD COLUMN theme_color TEXT DEFAULT '#FFD700'", args: [] });
+  } catch (e) {
+    // Column already exists — ignore
+  }
 }
 
 module.exports = { db, initDb };
