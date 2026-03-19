@@ -84,14 +84,14 @@ export default function Dashboard() {
 
       {/* Quick Log Button */}
       <Link to="/log" className="btn-primary w-full block text-center mb-6">
-        + Log New PR
+        + Log New Lift
       </Link>
 
       {/* No data state */}
       {liftCards.length === 0 && (
         <div className="card text-center py-10">
           <p className="text-gray-400 mb-2">No lifts logged yet</p>
-          <p className="text-gray-600 text-sm">Tap "Log New PR" to get started</p>
+          <p className="text-gray-600 text-sm">Tap "Log New Lift" to get started</p>
         </div>
       )}
 
@@ -198,23 +198,58 @@ export default function Dashboard() {
   );
 }
 
-// Overlay chart component for exercise comparison — now works with ANY logged exercises
+// Overlay chart component for exercise comparison — pro users can pick up to 3 lifts
 function OverlayChart({ logs, unit }) {
-  // Dynamically discover which exercises have data
   const COLORS_PALETTE = [getPrimaryColor(), '#3b82f6', '#ef4444', '#a855f7', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4', '#f97316'];
+
+  // Discover all exercises with data
   const exerciseSet = new Set();
   for (const log of logs) {
     exerciseSet.add(log.exercise_name);
   }
   const availableExercises = Array.from(exerciseSet);
+
+  // Selected lifts (persisted in localStorage, max 3)
+  const [selectedLifts, setSelectedLifts] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('sc_chart_lifts'));
+      if (Array.isArray(saved) && saved.length > 0) {
+        // Filter to only exercises that still have data
+        const valid = saved.filter(ex => exerciseSet.has(ex));
+        if (valid.length > 0) return valid.slice(0, 3);
+      }
+    } catch {}
+    // Default: first 3 available exercises
+    return availableExercises.slice(0, 3);
+  });
+
+  const toggleLift = (exercise) => {
+    setSelectedLifts(prev => {
+      let next;
+      if (prev.includes(exercise)) {
+        next = prev.filter(e => e !== exercise);
+      } else if (prev.length >= 3) {
+        // Replace oldest selection
+        next = [...prev.slice(1), exercise];
+      } else {
+        next = [...prev, exercise];
+      }
+      localStorage.setItem('sc_chart_lifts', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const COLORS = {};
   availableExercises.forEach((ex, i) => {
     COLORS[ex] = COLORS_PALETTE[i % COLORS_PALETTE.length];
   });
 
-  // Group logs by date (monthly) and exercise, compute best e1rm per period
+  const displayedLifts = selectedLifts.length > 0 ? selectedLifts : availableExercises.slice(0, 3);
+
+  // Group logs by month and exercise, compute best e1rm per period
   const byMonth = {};
   for (const log of logs) {
+    if (!displayedLifts.includes(log.exercise_name)) continue;
     const d = new Date(log.logged_at);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (!byMonth[key]) byMonth[key] = {};
@@ -233,18 +268,39 @@ function OverlayChart({ logs, unit }) {
   if (data.length < 2) return <p className="text-gray-500 text-xs text-center py-4">Need more data for comparison</p>;
 
   return (
-    <div className="w-full h-48">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-          <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} />
-          <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3a3a3a', borderRadius: 8, fontSize: 12 }} />
-          <Legend iconSize={8} wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
-          {availableExercises.map(lift => (
-            <Line key={lift} type="monotone" dataKey={lift} stroke={COLORS[lift]} strokeWidth={2} dot={{ r: 3 }} connectNulls />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+    <div>
+      {/* Lift selector pills */}
+      <div className="flex gap-1.5 flex-wrap mb-3">
+        {availableExercises.map(ex => (
+          <button
+            key={ex}
+            onClick={() => toggleLift(ex)}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-display font-bold uppercase transition-all ${
+              selectedLifts.includes(ex)
+                ? 'text-dark-900 scale-105'
+                : 'bg-dark-700 text-gray-400 border border-dark-500'
+            }`}
+            style={selectedLifts.includes(ex) ? { backgroundColor: COLORS[ex] } : undefined}
+          >
+            {ex}
+          </button>
+        ))}
+      </div>
+      <p className="text-gray-600 text-[10px] mb-2">Tap to select up to 3 exercises</p>
+
+      <div className="w-full h-48">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+            <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} />
+            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3a3a3a', borderRadius: 8, fontSize: 12 }} />
+            <Legend iconSize={8} wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+            {displayedLifts.map(lift => (
+              <Line key={lift} type="monotone" dataKey={lift} stroke={COLORS[lift]} strokeWidth={2} dot={{ r: 3 }} connectNulls />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

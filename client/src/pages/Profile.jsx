@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePremium, PREMIUM_FEATURES } from '../context/PremiumContext';
 import { ProTag } from '../components/PremiumGate';
@@ -10,13 +11,14 @@ import { formatWeight, inputToKg, kgToDisplay, formatDate } from '../utils/conve
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ProUpgradeModal from '../components/ProUpgradeModal';
 import { usePurchases } from '../hooks/usePurchases';
-import { getPrimaryColor, THEME_COLORS, applyThemeColor } from '../utils/colors';
+import { getPrimaryColor } from '../utils/colors';
 
 export default function Profile() {
   const { user, updateUser, logout } = useAuth();
   const { isPremium, isNative } = usePremium();
   const { restorePurchases, restoring } = usePurchases();
   const { addNotification } = useNotification();
+  const navigate = useNavigate();
   const unit = user?.unit_pref || 'lbs';
 
   const [bwLogs, setBwLogs] = useState([]);
@@ -33,6 +35,9 @@ export default function Profile() {
   const [earnedAchievements, setEarnedAchievements] = useState([]);
   const [allLifts, setAllLifts] = useState([]);
 
+  // New PR badge — true if any PR was set in the last 7 days
+  const [hasRecentPR, setHasRecentPR] = useState(false);
+
   // Showcase badge selection (persisted in localStorage)
   const [showcaseIds, setShowcaseIds] = useState(() => {
     const saved = localStorage.getItem('sc_showcase');
@@ -44,16 +49,6 @@ export default function Profile() {
 
   // Sections toggle
   const [showBWHistory, setShowBWHistory] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
-
-  // Privacy settings
-  const [privacySettings, setPrivacySettings] = useState(() => {
-    const ps = user?.privacy_settings;
-    if (typeof ps === 'string') {
-      try { return JSON.parse(ps); } catch { return {}; }
-    }
-    return ps || {};
-  });
 
   useEffect(() => {
     Promise.all([
@@ -105,20 +100,18 @@ export default function Profile() {
         setOverallPercentile(Math.round(percentiles.reduce((a, b) => a + b, 0) / percentiles.length));
       }
     }
-  }, [allLifts, bwLogs, friends, loading]);
-
-  const handleTogglePrivacy = async (key) => {
-    const updated = { ...privacySettings, [key]: privacySettings[key] === false ? true : false };
-    setPrivacySettings(updated);
-    try {
-      const data = await api.updateUser(user.id, { privacy_settings: updated });
-      updateUser(data.user);
-    } catch (err) {
-      console.error(err);
-      // Revert on error
-      setPrivacySettings(privacySettings);
+    // Check for recent PRs (within last 7 days)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const bestByExercise = {};
+    for (const log of allLifts) {
+      const e1rm = calcE1RM(log.weight_kg, log.reps);
+      if (!bestByExercise[log.exercise_name] || e1rm > bestByExercise[log.exercise_name].e1rm) {
+        bestByExercise[log.exercise_name] = { e1rm, logged_at: log.logged_at };
+      }
     }
-  };
+    setHasRecentPR(Object.values(bestByExercise).some(pr => new Date(pr.logged_at) >= oneWeekAgo));
+  }, [allLifts, bwLogs, friends, loading]);
 
   const handleLogBW = async (e) => {
     e.preventDefault();
@@ -211,23 +204,48 @@ export default function Profile() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               {/* Avatar */}
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                <span className="font-display font-extrabold text-xl text-dark-900">
-                  {(user.display_name || user.username || '?')[0].toUpperCase()}
-                </span>
+              <div className="relative">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                  <span className="font-display font-extrabold text-xl text-dark-900">
+                    {(user.display_name || user.username || '?')[0].toUpperCase()}
+                  </span>
+                </div>
+                {hasRecentPR && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-dark-800">
+                    <svg viewBox="0 0 24 24" className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="18 8 10 16 6 12" />
+                    </svg>
+                  </div>
+                )}
               </div>
               <div>
                 <h1 className="font-display font-extrabold text-2xl text-white">
                   {user.display_name || user.username}
                 </h1>
-                <p className="text-gray-500 text-xs">@{user.username}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-gray-500 text-xs">@{user.username}</p>
+                  {hasRecentPR && (
+                    <span className="text-green-400 text-[10px] font-display font-bold uppercase">New PR</span>
+                  )}
+                </div>
               </div>
             </div>
-            {isPremium && (
-              <span className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-xs font-display font-bold uppercase px-3 py-1.5 rounded-full tracking-wider border border-primary/20">
-                PRO
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {isPremium && (
+                <span className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-xs font-display font-bold uppercase px-3 py-1.5 rounded-full tracking-wider border border-primary/20">
+                  PRO
+                </span>
+              )}
+              <button
+                onClick={() => navigate('/settings')}
+                className="w-9 h-9 rounded-full bg-dark-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+              >
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Stats row */}
@@ -250,34 +268,40 @@ export default function Profile() {
 
           {/* Showcased Badges */}
           {earnedAchievements.length > 0 && (
-            <div className="mt-4 flex items-center gap-2 flex-wrap">
-              <span className="text-gray-500 text-[10px] uppercase tracking-wider mr-1">Showcase</span>
-              {showcasedBadges.length === 0 && (
-                <span className="text-gray-600 text-[10px] italic">Tap badges below to showcase</span>
+            <div className="mt-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-gray-500 text-[10px] uppercase tracking-wider">Showcase</span>
+                {showcasedBadges.length === 0 && (
+                  <span className="text-gray-600 text-[10px] italic">Tap badges below to showcase</span>
+                )}
+              </div>
+              {showcasedBadges.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {showcasedBadges.map(a => {
+                    const iconPath = BADGE_ICONS[a.category];
+                    const isStroke = a.category === 'strength' || a.category === 'social';
+                    return (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 min-w-0"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="w-3.5 h-3.5 text-primary flex-shrink-0"
+                          fill={isStroke ? 'none' : 'currentColor'}
+                          stroke={isStroke ? 'currentColor' : 'none'}
+                          strokeWidth={isStroke ? 2 : 0}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d={iconPath} />
+                        </svg>
+                        <span className="text-primary text-[10px] font-display font-bold uppercase truncate">{a.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-              {showcasedBadges.map(a => {
-                const iconPath = BADGE_ICONS[a.category];
-                const isStroke = a.category === 'strength' || a.category === 'social';
-                return (
-                  <div
-                    key={a.id}
-                    className="group relative flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="w-3.5 h-3.5 text-primary"
-                      fill={isStroke ? 'none' : 'currentColor'}
-                      stroke={isStroke ? 'currentColor' : 'none'}
-                      strokeWidth={isStroke ? 2 : 0}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d={iconPath} />
-                    </svg>
-                    <span className="text-primary text-[10px] font-display font-bold uppercase">{a.name}</span>
-                  </div>
-                );
-              })}
             </div>
           )}
         </div>
@@ -311,89 +335,6 @@ export default function Profile() {
             <span className="text-gray-500 ml-2">tap to switch</span>
           </button>
         </div>
-      </div>
-
-      {/* Theme Color */}
-      <div className="card mb-3">
-        <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-3">Theme Color</h3>
-        <div className="flex gap-3 flex-wrap">
-          {THEME_COLORS.map(({ name, value }) => (
-            <button
-              key={value}
-              onClick={async () => {
-                applyThemeColor(value);
-                try {
-                  const data = await api.updateUser(user.id, { theme_color: value });
-                  updateUser(data.user);
-                } catch (err) {
-                  console.error(err);
-                  applyThemeColor(user.theme_color);
-                }
-              }}
-              className={`w-10 h-10 rounded-full border-2 transition-transform active:scale-90 ${
-                (user.theme_color || '#FFD700') === value
-                  ? 'border-white scale-110'
-                  : 'border-dark-500'
-              }`}
-              style={{ backgroundColor: value }}
-              title={name}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Privacy Settings — Collapsible */}
-      <div className="card mb-3">
-        <button
-          onClick={() => setShowPrivacy(!showPrivacy)}
-          className="w-full flex justify-between items-center"
-        >
-          <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            Friend Visibility
-          </h3>
-          <svg
-            viewBox="0 0 24 24"
-            className={`w-4 h-4 text-gray-500 transition-transform ${showPrivacy ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
-
-        {showPrivacy && (
-          <div className="mt-3 space-y-2">
-            <p className="text-gray-500 text-xs mb-3">Choose what friends can see on your profile</p>
-            {[
-              { key: 'show_prs', label: 'Personal Records', desc: 'PRs, tier badges, and percentiles' },
-              { key: 'show_lifts', label: 'Lift History', desc: 'Progress charts and exercise logs' },
-              { key: 'show_bodyweight', label: 'Bodyweight', desc: 'Current weight and trend chart' },
-              { key: 'show_achievements', label: 'Achievements', desc: 'Earned badges and showcase' },
-            ].map(({ key, label, desc }) => (
-              <div key={key} className="flex items-center justify-between py-2 px-3 bg-dark-700 rounded-lg">
-                <div>
-                  <p className="text-white text-sm font-display font-semibold">{label}</p>
-                  <p className="text-gray-500 text-[10px]">{desc}</p>
-                </div>
-                <button
-                  onClick={() => handleTogglePrivacy(key)}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${
-                    privacySettings[key] !== false ? 'bg-primary' : 'bg-dark-500'
-                  }`}
-                >
-                  <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                    privacySettings[key] !== false ? 'translate-x-5' : 'translate-x-0.5'
-                  }`} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Log Bodyweight */}

@@ -125,7 +125,7 @@ export default function LogPR() {
 
   return (
     <div className="px-4 pt-6 pb-4 overflow-x-hidden">
-      <h1 className="font-display font-extrabold text-3xl text-white mb-6">LOG PR</h1>
+      <h1 className="font-display font-extrabold text-3xl text-white mb-6">LOG LIFT</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Exercise Select */}
@@ -271,7 +271,7 @@ export default function LogPR() {
         )}
 
         <button type="submit" className="btn-primary w-full" disabled={loading}>
-          {loading ? 'Saving...' : 'Log PR'}
+          {loading ? 'Saving...' : 'Log Lift'}
         </button>
       </form>
     </div>

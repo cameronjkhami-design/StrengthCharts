@@ -1,8 +1,12 @@
 import { usePremium } from '../context/PremiumContext';
 
-export function ProTag() {
+export function ProTag({ inverted = false }) {
   return (
-    <span className="inline-flex items-center bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-[9px] font-display font-bold uppercase px-2 py-0.5 rounded-full tracking-wider border border-primary/20">
+    <span className={`inline-flex items-center text-[9px] font-display font-bold uppercase px-2 py-0.5 rounded-full tracking-wider ${
+      inverted
+        ? 'bg-dark-900/40 text-dark-900 border border-dark-900/30'
+        : 'bg-gradient-to-r from-primary/20 to-primary/10 text-primary border border-primary/20'
+    }`}>
       PRO
     </span>
   );

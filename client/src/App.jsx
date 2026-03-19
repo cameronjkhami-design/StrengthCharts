@@ -7,11 +7,12 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import LogPR from './pages/LogPR';
 import MyLifts from './pages/MyLifts';
-import Leaderboard from './pages/Leaderboard';
+// Leaderboard is now embedded in Friends page
 import Profile from './pages/Profile';
 import Overview from './pages/Overview';
 import Friends from './pages/Friends';
 import FriendProfile from './pages/FriendProfile';
+import Settings from './pages/Settings';
 
 function PageWrapper({ children }) {
   const location = useLocation();
@@ -34,11 +35,12 @@ function ProtectedLayout() {
             <Route path="/" element={<PageWrapper><Dashboard /></PageWrapper>} />
             <Route path="/log" element={<PageWrapper><LogPR /></PageWrapper>} />
             <Route path="/lifts" element={<PageWrapper><MyLifts /></PageWrapper>} />
-            <Route path="/leaderboard" element={<PageWrapper><Leaderboard /></PageWrapper>} />
+            {/* Leaderboard is now a sub-tab in Friends */}
             <Route path="/overview" element={<PageWrapper><Overview /></PageWrapper>} />
             <Route path="/friends" element={<PageWrapper><Friends /></PageWrapper>} />
             <Route path="/friends/:friendId" element={<PageWrapper><FriendProfile /></PageWrapper>} />
             <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
+            <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
           </Routes>
         </div>
         <BottomNav />

@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 
 function triggerHaptic() {
+  if (localStorage.getItem('sc_haptics') === 'false') return;
   if (window.Capacitor?.isNativePlatform()) {
     import('@capacitor/haptics').then(({ Haptics, ImpactStyle }) => {
       Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
@@ -16,7 +17,7 @@ const tabs = [
       <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )},
-  { path: '/log', label: 'Log PR', icon: (
+  { path: '/log', label: 'Log Lift', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6">
       <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
