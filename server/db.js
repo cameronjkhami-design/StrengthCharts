@@ -20,10 +20,21 @@ async function initDb() {
       username TEXT UNIQUE NOT NULL,
       pin_hash TEXT NOT NULL,
       display_name TEXT,
+      email TEXT,
       unit_pref TEXT DEFAULT 'lbs',
       is_premium INTEGER DEFAULT 0,
       premium_purchased_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS bodyweight_logs (
@@ -61,6 +72,11 @@ async function initDb() {
   // Migrations: add columns that may not exist yet
   try {
     await db.execute({ sql: 'ALTER TABLE lift_logs ADD COLUMN rpe REAL', args: [] });
+  } catch (e) {
+    // Column already exists — ignore
+  }
+  try {
+    await db.execute({ sql: 'ALTER TABLE users ADD COLUMN email TEXT', args: [] });
   } catch (e) {
     // Column already exists — ignore
   }

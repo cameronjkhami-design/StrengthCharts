@@ -27,7 +27,9 @@ async function request(path, options = {}) {
 export const api = {
   // Auth
   login: (username, pin) => request('/auth/login', { method: 'POST', body: JSON.stringify({ username, pin }) }),
-  signup: (username, pin, display_name) => request('/auth/signup', { method: 'POST', body: JSON.stringify({ username, pin, display_name }) }),
+  signup: (username, pin, display_name, email) => request('/auth/signup', { method: 'POST', body: JSON.stringify({ username, pin, display_name, email }) }),
+  forgotPin: (email) => request('/auth/forgot-pin', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPin: (email, code, new_pin) => request('/auth/reset-pin', { method: 'POST', body: JSON.stringify({ email, code, new_pin }) }),
   updateUser: (id, data) => request(`/auth/user/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updatePremiumStatus: (id, is_premium) => request(`/auth/user/${id}/premium`, { method: 'PUT', body: JSON.stringify({ is_premium }) }),
 
