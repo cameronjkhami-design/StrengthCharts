@@ -10,6 +10,8 @@ import MyLifts from './pages/MyLifts';
 import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
 import Overview from './pages/Overview';
+import Friends from './pages/Friends';
+import FriendProfile from './pages/FriendProfile';
 
 function PageWrapper({ children }) {
   const location = useLocation();
@@ -34,6 +36,8 @@ function ProtectedLayout() {
             <Route path="/lifts" element={<PageWrapper><MyLifts /></PageWrapper>} />
             <Route path="/leaderboard" element={<PageWrapper><Leaderboard /></PageWrapper>} />
             <Route path="/overview" element={<PageWrapper><Overview /></PageWrapper>} />
+            <Route path="/friends" element={<PageWrapper><Friends /></PageWrapper>} />
+            <Route path="/friends/:friendId" element={<PageWrapper><FriendProfile /></PageWrapper>} />
             <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
           </Routes>
         </div>

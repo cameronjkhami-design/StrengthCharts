@@ -151,4 +151,93 @@ router.delete('/', async (req, res) => {
   }
 });
 
+// GET /api/friends/:userId/profile/:friendId — get a friend's public profile
+router.get('/:userId/profile/:friendId', async (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const friendId = parseInt(req.params.friendId);
+
+  // Verify they are friends
+  const friendship = await db.execute({
+    sql: "SELECT id FROM friendships WHERE user_id = ? AND friend_id = ? AND status = 'accepted'",
+    args: [userId, friendId]
+  });
+  if (friendship.rows.length === 0) {
+    return res.status(403).json({ error: 'Not friends with this user' });
+  }
+
+  // Get friend's user info + privacy settings
+  const userResult = await db.execute({
+    sql: 'SELECT id, username, display_name, unit_pref, is_premium, privacy_settings, created_at FROM users WHERE id = ?',
+    args: [friendId]
+  });
+  if (userResult.rows.length === 0) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const friend = userResult.rows[0];
+  let privacy = {};
+  try {
+    privacy = friend.privacy_settings ? JSON.parse(friend.privacy_settings) : {};
+  } catch (e) {
+    privacy = {};
+  }
+
+  // Defaults: everything visible
+  const showPrs = privacy.show_prs !== false;
+  const showLifts = privacy.show_lifts !== false;
+  const showBodyweight = privacy.show_bodyweight !== false;
+  const showAchievements = privacy.show_achievements !== false;
+
+  const profile = {
+    id: friend.id,
+    username: friend.username,
+    display_name: friend.display_name,
+    is_premium: friend.is_premium,
+    created_at: friend.created_at,
+    privacy: { showPrs, showLifts, showBodyweight, showAchievements },
+  };
+
+  // PRs
+  if (showPrs) {
+    const prs = await db.execute({
+      sql: `SELECT exercise_name, weight_kg, reps,
+              weight_kg * (1 + reps / 30.0) as e1rm
+            FROM lift_logs
+            WHERE user_id = ?
+            GROUP BY exercise_name
+            HAVING e1rm = MAX(weight_kg * (1 + reps / 30.0))
+            ORDER BY e1rm DESC`,
+      args: [friendId]
+    });
+    profile.prs = prs.rows;
+  }
+
+  // Lift history
+  if (showLifts) {
+    const lifts = await db.execute({
+      sql: 'SELECT id, exercise_name, weight_kg, reps, rpe, logged_at FROM lift_logs WHERE user_id = ? ORDER BY logged_at DESC',
+      args: [friendId]
+    });
+    profile.lifts = lifts.rows;
+  }
+
+  // Bodyweight
+  if (showBodyweight) {
+    const bw = await db.execute({
+      sql: 'SELECT weight_kg, logged_at FROM bodyweight_logs WHERE user_id = ? ORDER BY logged_at DESC',
+      args: [friendId]
+    });
+    profile.bodyweight = bw.rows;
+  }
+
+  // Friend count
+  const friendCount = await db.execute({
+    sql: "SELECT COUNT(*) as count FROM friendships WHERE user_id = ? AND status = 'accepted'",
+    args: [friendId]
+  });
+  profile.friendCount = friendCount.rows[0].count;
+
+  res.json({ profile });
+});
+
 module.exports = router;

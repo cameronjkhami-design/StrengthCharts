@@ -1,9 +1,10 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { formatDateShort } from '../utils/conversions';
 import { calcE1RM } from '../utils/benchmarks';
-import { PRIMARY_COLOR } from '../utils/colors';
+import { getPrimaryColor } from '../utils/colors';
 
 export default function StrengthRatioChart({ logs, bodyweightKg, unit = 'lbs' }) {
+  const primaryColor = getPrimaryColor();
   if (!logs || logs.length === 0 || !bodyweightKg) return null;
 
   const data = [...logs]
@@ -48,9 +49,9 @@ export default function StrengthRatioChart({ logs, bodyweightKg, unit = 'lbs' })
           <Line
             type="monotone"
             dataKey="ratio"
-            stroke={PRIMARY_COLOR}
+            stroke={primaryColor}
             strokeWidth={2}
-            dot={{ fill: PRIMARY_COLOR, r: 3 }}
+            dot={{ fill: primaryColor, r: 3 }}
             activeDot={{ r: 5 }}
           />
         </LineChart>

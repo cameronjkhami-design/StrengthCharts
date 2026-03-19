@@ -1,18 +1,26 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { applyThemeColor } from '../utils/colors';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('sc_user');
-    return saved ? JSON.parse(saved) : null;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      applyThemeColor(parsed.theme_color);
+      return parsed;
+    }
+    return null;
   });
 
   useEffect(() => {
     if (user) {
       localStorage.setItem('sc_user', JSON.stringify(user));
+      applyThemeColor(user.theme_color);
     } else {
       localStorage.removeItem('sc_user');
+      applyThemeColor(null);
     }
   }, [user]);
 

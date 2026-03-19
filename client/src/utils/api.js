@@ -59,4 +59,5 @@ export const api = {
   acceptFriend: (user_id, friend_id) => request('/friends/accept', { method: 'PUT', body: JSON.stringify({ user_id, friend_id }) }),
   declineFriend: (user_id, friend_id) => request('/friends/decline', { method: 'PUT', body: JSON.stringify({ user_id, friend_id }) }),
   removeFriend: (user_id, friend_id) => request('/friends', { method: 'DELETE', body: JSON.stringify({ user_id, friend_id }) }),
+  getFriendProfile: (userId, friendId) => request(`/friends/${userId}/profile/${friendId}`),
 };

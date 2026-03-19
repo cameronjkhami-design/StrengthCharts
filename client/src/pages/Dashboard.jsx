@@ -9,6 +9,7 @@ import TierBadge from '../components/TierBadge';
 import ProgressBar from '../components/ProgressBar';
 import PremiumGate, { ProTag } from '../components/PremiumGate';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { getPrimaryColor } from '../utils/colors';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -200,7 +201,7 @@ export default function Dashboard() {
 // Overlay chart component for exercise comparison — now works with ANY logged exercises
 function OverlayChart({ logs, unit }) {
   // Dynamically discover which exercises have data
-  const COLORS_PALETTE = ['#FFD700', '#3b82f6', '#ef4444', '#a855f7', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4', '#f97316'];
+  const COLORS_PALETTE = [getPrimaryColor(), '#3b82f6', '#ef4444', '#a855f7', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4', '#f97316'];
   const exerciseSet = new Set();
   for (const log of logs) {
     exerciseSet.add(log.exercise_name);
