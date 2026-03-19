@@ -18,7 +18,7 @@ export function NotificationProvider({ children }) {
       {children}
       {/* Toast container */}
       <div className="fixed top-0 left-0 right-0 flex justify-center z-50 pointer-events-none">
-        <div className="w-full max-w-lg px-4 pt-2 safe-top">
+        <div className="w-full max-w-lg px-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
           {notifications.map(n => (
             <div
               key={n.id}

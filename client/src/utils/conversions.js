@@ -7,8 +7,8 @@ export function lbsToKg(lbs) {
 }
 
 export function formatWeight(kg, unit = 'lbs') {
-  if (unit === 'kg') return `${Math.round(kg * 10) / 10} kg`;
-  return `${Math.round(kgToLbs(kg) * 10) / 10} lbs`;
+  if (unit === 'kg') return `${Math.round(kg)} kg`;
+  return `${Math.round(kgToLbs(kg))} lbs`;
 }
 
 export function inputToKg(value, unit = 'lbs') {
@@ -18,8 +18,8 @@ export function inputToKg(value, unit = 'lbs') {
 }
 
 export function kgToDisplay(kg, unit = 'lbs') {
-  if (unit === 'kg') return Math.round(kg * 10) / 10;
-  return Math.round(kgToLbs(kg) * 10) / 10;
+  if (unit === 'kg') return Math.round(kg);
+  return Math.round(kgToLbs(kg));
 }
 
 export function formatDate(dateStr) {

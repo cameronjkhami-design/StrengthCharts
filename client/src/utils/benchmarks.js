@@ -86,5 +86,44 @@ export function calcE1RM(weight, reps) {
   return weight * (1 + reps / 30);
 }
 
+// Estimate what percentile of lifters a given BW ratio places you in
+// Based on approximate population distribution across strength tiers
+// Returns a number 0-99
+export function getPercentile(exerciseName, ratio) {
+  const thresholds = TIER_THRESHOLDS[exerciseName];
+  if (!thresholds || ratio <= 0) return 0;
+
+  // Approximate cumulative percentiles at tier boundaries
+  // Untrained ~0-20%, Beginner ~20-40%, Intermediate ~40-65%,
+  // Advanced ~65-85%, Elite ~85-97%, World Class ~97-100%
+  const tierPercentiles = [
+    { min: 0, pctStart: 0, pctEnd: 20 },      // Untrained
+    { min: 0, pctStart: 20, pctEnd: 40 },      // Beginner
+    { min: 0, pctStart: 40, pctEnd: 65 },      // Intermediate
+    { min: 0, pctStart: 65, pctEnd: 85 },      // Advanced
+    { min: 0, pctStart: 85, pctEnd: 97 },      // Elite
+    { min: 0, pctStart: 97, pctEnd: 100 },     // World Class
+  ];
+
+  // Map thresholds to percentile ranges
+  for (let i = 0; i < thresholds.length; i++) {
+    tierPercentiles[i].min = thresholds[i].min;
+    tierPercentiles[i].max = thresholds[i].max;
+  }
+
+  // Find which tier range the ratio falls in
+  let tierIdx = 0;
+  for (let i = 0; i < tierPercentiles.length; i++) {
+    if (ratio >= tierPercentiles[i].min) tierIdx = i;
+  }
+
+  const t = tierPercentiles[tierIdx];
+  const range = t.max - t.min;
+  const progress = range > 0 ? Math.min(1, (ratio - t.min) / range) : 1;
+  const percentile = Math.round(t.pctStart + progress * (t.pctEnd - t.pctStart));
+
+  return Math.min(99, Math.max(1, percentile));
+}
+
 export const MAIN_LIFTS = ['Squat', 'Bench Press', 'Deadlift', 'Overhead Press', 'Barbell Row', 'Pull-ups'];
 export const DEFAULT_EXERCISES = ['Squat', 'Bench Press', 'Deadlift', 'Overhead Press', 'Barbell Row', 'Pull-ups'];

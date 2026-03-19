@@ -5,7 +5,7 @@ import { api } from '../utils/api';
 import { getTier } from '../utils/benchmarks';
 import { kgToDisplay } from '../utils/conversions';
 import TierBadge from '../components/TierBadge';
-import PremiumGate from '../components/PremiumGate';
+import PremiumGate, { ProTag } from '../components/PremiumGate';
 
 const SORT_OPTIONS = [
   { key: 'overall', label: 'Overall' },
@@ -61,7 +61,10 @@ export default function Leaderboard() {
 
   return (
     <div className="px-4 pt-6 pb-4">
-      <h1 className="font-display font-extrabold text-3xl text-white mb-4">LEADERBOARD</h1>
+      <h1 className="font-display font-extrabold text-3xl text-white mb-4 flex items-center gap-3">
+        LEADERBOARD
+        <ProTag />
+      </h1>
 
       {!hasPro ? (
         <PremiumGate featureId={PREMIUM_FEATURES.FRIEND_LEADERBOARD}>

@@ -7,7 +7,7 @@ import { formatWeight, kgToDisplay, formatDate } from '../utils/conversions';
 import TierBadge from '../components/TierBadge';
 import ProgressBar from '../components/ProgressBar';
 import LiftChart from '../components/LiftChart';
-import PremiumGate from '../components/PremiumGate';
+import PremiumGate, { ProTag } from '../components/PremiumGate';
 import StrengthRatioChart from '../components/StrengthRatioChart';
 
 export default function MyLifts() {
@@ -158,8 +158,9 @@ export default function MyLifts() {
               {bwKg && logs.length > 1 && (
                 <PremiumGate featureId={PREMIUM_FEATURES.STRENGTH_BW_RATIO_CHART} blurContent>
                   <div className="card mb-4">
-                    <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-2">
+                    <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-2 flex items-center gap-2">
                       Strength-to-BW Ratio Trend
+                      <ProTag />
                     </h3>
                     <StrengthRatioChart logs={logs} bodyweightKg={bwKg} unit={unit} />
                   </div>

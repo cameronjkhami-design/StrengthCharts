@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePremium, PREMIUM_FEATURES } from '../context/PremiumContext';
 import { api } from '../utils/api';
-import { getTier, calcE1RM, MAIN_LIFTS } from '../utils/benchmarks';
+import { getTier, calcE1RM, getPercentile, MAIN_LIFTS } from '../utils/benchmarks';
 import { formatWeight, kgToDisplay, formatDateShort } from '../utils/conversions';
 import TierBadge from '../components/TierBadge';
 import ProgressBar from '../components/ProgressBar';
-import PremiumGate from '../components/PremiumGate';
+import PremiumGate, { ProTag } from '../components/PremiumGate';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function Dashboard() {
@@ -48,7 +48,8 @@ export default function Dashboard() {
     const ratio = bwKg ? e1rm / bwKg : 0;
     const tierInfo = getTier(liftName, ratio);
 
-    return { liftName, pr, e1rm, ratio, tierInfo };
+    const percentile = bwKg ? getPercentile(liftName, ratio) : null;
+    return { liftName, pr, e1rm, ratio, tierInfo, percentile };
   }).filter(c => c.pr);
 
   if (loading) {
@@ -96,8 +97,9 @@ export default function Dashboard() {
       {liftCards.length >= 2 && (
         <PremiumGate featureId={PREMIUM_FEATURES.OVERLAY_CHARTS} blurContent>
           <div className="card mb-6">
-            <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-2">
+            <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-2 flex items-center gap-2">
               Exercise Comparison
+              <ProTag />
             </h3>
             <OverlayChart logs={allLogs} unit={unit} />
           </div>
@@ -106,7 +108,7 @@ export default function Dashboard() {
 
       {/* Lift Summary Cards */}
       <div className="space-y-3">
-        {liftCards.map(({ liftName, pr, e1rm, ratio, tierInfo }) => (
+        {liftCards.map(({ liftName, pr, e1rm, ratio, tierInfo, percentile }) => (
           <div key={liftName} className="card">
             <div className="flex justify-between items-start mb-2">
               <div>
@@ -129,6 +131,11 @@ export default function Dashboard() {
               {bwKg && (
                 <span className="text-gray-500 text-xs">
                   {ratio.toFixed(2)}x BW
+                </span>
+              )}
+              {percentile && (
+                <span className="text-primary/80 text-xs font-display font-bold">
+                  Top {100 - percentile}%
                 </span>
               )}
             </div>

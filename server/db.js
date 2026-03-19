@@ -40,6 +40,7 @@ async function initDb() {
       exercise_name TEXT NOT NULL,
       weight_kg REAL NOT NULL,
       reps INTEGER NOT NULL,
+      rpe REAL,
       logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       notes TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id)
@@ -56,6 +57,13 @@ async function initDb() {
       UNIQUE(user_id, friend_id)
     );
   `);
+
+  // Migrations: add columns that may not exist yet
+  try {
+    await db.execute({ sql: 'ALTER TABLE lift_logs ADD COLUMN rpe REAL', args: [] });
+  } catch (e) {
+    // Column already exists — ignore
+  }
 }
 
 module.exports = { db, initDb };

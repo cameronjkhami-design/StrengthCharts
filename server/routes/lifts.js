@@ -52,15 +52,15 @@ router.get('/:userId/prs', async (req, res) => {
 
 // POST /api/lifts — log a new lift
 router.post('/', async (req, res) => {
-  const { user_id, exercise_name, weight_kg, reps, logged_at, notes } = req.body;
+  const { user_id, exercise_name, weight_kg, reps, logged_at, notes, rpe } = req.body;
   if (!user_id || !exercise_name || weight_kg === undefined || !reps) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
     const result = await db.execute({
-      sql: 'INSERT INTO lift_logs (user_id, exercise_name, weight_kg, reps, logged_at, notes) VALUES (?, ?, ?, ?, ?, ?)',
-      args: [user_id, exercise_name, weight_kg, reps, logged_at || new Date().toISOString(), notes || null]
+      sql: 'INSERT INTO lift_logs (user_id, exercise_name, weight_kg, reps, logged_at, notes, rpe) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      args: [user_id, exercise_name, weight_kg, reps, logged_at || new Date().toISOString(), notes || null, rpe || null]
     });
 
     const log = await db.execute({

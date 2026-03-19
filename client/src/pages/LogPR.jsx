@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
-import { inputToKg } from '../utils/conversions';
+import { inputToKg, kgToDisplay } from '../utils/conversions';
 import { DEFAULT_EXERCISES } from '../utils/benchmarks';
 import { useNotification } from '../context/NotificationContext';
 
@@ -25,12 +25,37 @@ export default function LogPR() {
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [rpe, setRpe] = useState('');
   const [notes, setNotes] = useState('');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [lastWeight, setLastWeight] = useState(null);
+  const [suggestion, setSuggestion] = useState(null);
+
   const selectedExercise = exercise === '__custom__' ? customExercise : exercise;
+
+  // Fetch last logged weight when exercise changes
+  useEffect(() => {
+    if (!selectedExercise || !user?.id) {
+      setLastWeight(null);
+      setSuggestion(null);
+      return;
+    }
+    api.getExerciseLogs(user.id, selectedExercise).then(logs => {
+      if (logs.length > 0) {
+        const latest = logs[0]; // most recent
+        const displayWeight = kgToDisplay(latest.weight_kg, unit);
+        setLastWeight(displayWeight);
+        const bump = unit === 'kg' ? 2.5 : 5;
+        setSuggestion(Math.round(displayWeight + bump));
+      } else {
+        setLastWeight(null);
+        setSuggestion(null);
+      }
+    }).catch(() => {});
+  }, [selectedExercise, user?.id, unit]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,12 +88,25 @@ export default function LogPR() {
         reps: repsNum,
         logged_at: new Date(date).toISOString(),
         notes: notes || null,
+        rpe: rpe ? parseFloat(rpe) : null,
       });
       setSuccess(true);
       triggerHeavyHaptic();
       addNotification(`${selectedExercise} PR logged!`, 'success');
+
+      // Progressive overload encouragement
+      const loggedWeight = parseFloat(weight);
+      if (lastWeight && loggedWeight >= lastWeight) {
+        const bump = unit === 'kg' ? 2.5 : 5;
+        const nextTarget = Math.round(loggedWeight + bump);
+        setTimeout(() => {
+          addNotification(`Next goal: ${nextTarget} ${unit} — keep pushing!`, 'info');
+        }, 1500);
+      }
+
       setWeight('');
       setReps('');
+      setRpe('');
       setNotes('');
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -82,7 +120,7 @@ export default function LogPR() {
   const weightNum = parseFloat(weight);
   const repsNum = parseInt(reps);
   const e1rmPreview = !isNaN(weightNum) && !isNaN(repsNum) && repsNum > 0
-    ? Math.round((repsNum === 1 ? weightNum : weightNum * (1 + repsNum / 30)) * 10) / 10
+    ? Math.round(repsNum === 1 ? weightNum : weightNum * (1 + repsNum / 30))
     : null;
 
   return (
@@ -105,6 +143,19 @@ export default function LogPR() {
             <option value="__custom__">+ Custom Exercise</option>
           </select>
         </div>
+
+        {suggestion && (
+          <div
+            className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-2 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
+            onClick={() => setWeight(String(suggestion))}
+          >
+            <div>
+              <p className="text-primary text-xs font-display font-bold uppercase">Progressive Overload</p>
+              <p className="text-gray-300 text-sm">Last: {lastWeight} {unit} — Try <span className="text-primary font-bold">{suggestion} {unit}</span></p>
+            </div>
+            <span className="text-primary text-lg">↑</span>
+          </div>
+        )}
 
         {exercise === '__custom__' && (
           <div>
@@ -167,6 +218,34 @@ export default function LogPR() {
             onChange={(e) => setDate(e.target.value)}
             className="input-field"
           />
+        </div>
+
+        {/* RPE (optional) */}
+        <div>
+          <label className="text-gray-400 text-xs uppercase tracking-wider mb-1 block">
+            RPE (optional)
+          </label>
+          <div className="flex gap-1.5">
+            {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(val => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setRpe(rpe === String(val) ? '' : String(val))}
+                className={`flex-1 py-2 rounded-lg text-xs font-display font-bold transition-all ${
+                  rpe === String(val)
+                    ? 'bg-primary text-dark-900 scale-105'
+                    : 'bg-dark-700 text-gray-400 border border-dark-500'
+                }`}
+              >
+                {val}
+              </button>
+            ))}
+          </div>
+          {rpe && (
+            <p className="text-gray-500 text-[10px] mt-1 text-center">
+              {parseFloat(rpe) <= 7 ? 'Could do 3+ more reps' : parseFloat(rpe) <= 8 ? 'Could do 2 more reps' : parseFloat(rpe) <= 9 ? 'Could do 1 more rep' : parseFloat(rpe) >= 10 ? 'Max effort — nothing left' : 'Almost max effort'}
+            </p>
+          )}
         </div>
 
         {/* Notes */}
