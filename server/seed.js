@@ -10,20 +10,20 @@ async function seed() {
   console.log('Seeding database...');
 
   // Clear existing data
-  await db.executeMultiple('DELETE FROM friendships; DELETE FROM lift_logs; DELETE FROM bodyweight_logs; DELETE FROM users;');
+  await db.executeMultiple('DELETE FROM password_reset_tokens; DELETE FROM friendships; DELETE FROM lift_logs; DELETE FROM bodyweight_logs; DELETE FROM users;');
 
   // Create users
   const users = [
-    { username: 'marcus', pin: '123456', display_name: 'Marcus' },
-    { username: 'sarah', pin: '123456', display_name: 'Sarah' },
-    { username: 'jake', pin: '123456', display_name: 'Jake' },
+    { username: 'marcus', pin: '123456', display_name: 'Marcus', email: 'marcus@demo.com' },
+    { username: 'sarah', pin: '123456', display_name: 'Sarah', email: 'sarah@demo.com' },
+    { username: 'jake', pin: '123456', display_name: 'Jake', email: 'jake@demo.com' },
   ];
 
   const userIds = [];
   for (const u of users) {
     const result = await db.execute({
-      sql: 'INSERT INTO users (username, pin_hash, display_name) VALUES (?, ?, ?)',
-      args: [u.username, hashPin(u.pin), u.display_name]
+      sql: 'INSERT INTO users (username, pin_hash, display_name, email) VALUES (?, ?, ?, ?)',
+      args: [u.username, hashPin(u.pin), u.display_name, u.email]
     });
     userIds.push(Number(result.lastInsertRowid));
   }

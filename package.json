@@ -15,7 +15,7 @@
     "concurrently": "^9.1.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
-    "nodemailer": "^8.0.3"
+    "resend": "^6.9.4"
   },
   "devDependencies": {
     "sharp": "^0.34.5"

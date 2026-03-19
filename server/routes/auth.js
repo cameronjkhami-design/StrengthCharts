@@ -1,21 +1,11 @@
 const express = require('express');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { db } = require('../db');
 const router = express.Router();
 
-// Email transporter — configure via env vars
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
-const FROM_EMAIL = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@strengthcharts.app';
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM_EMAIL = process.env.RESEND_FROM || 'StrengthCharts <onboarding@resend.dev>';
 
 function hashPin(pin) {
   return crypto.createHash('sha256').update(pin).digest('hex');
@@ -155,11 +145,11 @@ router.post('/forgot-pin', async (req, res) => {
     args: [user.id, hashPin(code), expiresAt]
   });
 
-  // Send email
+  // Send email via Resend
   try {
-    await transporter.sendMail({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
-      to: email.toLowerCase(),
+      to: [email.toLowerCase()],
       subject: 'StrengthCharts — Reset Your PIN',
       html: `
         <div style="font-family: -apple-system, sans-serif; max-width: 400px; margin: 0 auto; padding: 32px; background: #111; color: #fff; border-radius: 12px;">
@@ -173,6 +163,7 @@ router.post('/forgot-pin', async (req, res) => {
         </div>
       `,
     });
+    if (sendError) throw sendError;
   } catch (err) {
     console.error('Email send error:', err);
     return res.status(500).json({ error: 'Failed to send reset email. Please try again.' });
