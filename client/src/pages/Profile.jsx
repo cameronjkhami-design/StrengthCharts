@@ -40,6 +40,9 @@ export default function Profile() {
   // New PR badge — true if any PR was set in the last 7 days
   const [hasRecentPR, setHasRecentPR] = useState(false);
 
+  // Friend group leader — true if user is #1 on leaderboard
+  const [isGroupLeader, setIsGroupLeader] = useState(false);
+
   // Profile photo (persisted in localStorage as base64)
   const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('sc_profile_photo') || user?.profile_photo || null);
   const [showCropModal, setShowCropModal] = useState(false);
@@ -148,6 +151,10 @@ export default function Profile() {
       api.getBodyweight(user.id).then(data => setBwLogs(data.logs)),
       api.getFriends(user.id).then(data => setFriends(data.friends)),
       api.getLifts(user.id).then(data => setAllLifts(data.logs)),
+      api.getLeaderboard(user.id).then(data => {
+        const sorted = [...(data.leaderboard || [])].sort((a, b) => b.total_relative_score - a.total_relative_score);
+        setIsGroupLeader(sorted.length > 1 && sorted[0]?.user_id === user.id);
+      }).catch(() => {}),
     ])
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -334,10 +341,15 @@ export default function Profile() {
                 <h1 className="font-display font-extrabold text-2xl text-white">
                   {user.display_name || user.username}
                 </h1>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-gray-500 text-xs">@{user.username}</p>
                   {hasRecentPR && (
                     <span className="text-green-400 text-[10px] font-display font-bold uppercase">New PR</span>
+                  )}
+                  {isGroupLeader && (
+                    <span className="text-yellow-400 text-[9px] font-display font-bold uppercase bg-yellow-400/15 px-1.5 py-0.5 rounded-full border border-yellow-400/30">
+                      👑 Friend Group Leader
+                    </span>
                   )}
                 </div>
               </div>
