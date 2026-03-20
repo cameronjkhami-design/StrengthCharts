@@ -1,10 +1,17 @@
 // Achievement definitions — Premium achievement system
-// Each achievement has an id, name, description, category, rarity, and a check function
+// Each achievement has an id, name, description, category, and a check function
+// Rarity can be static or a function of stats (for sex-dependent rarity)
 // check(stats) returns true if the achievement is earned
+
+// Helper: returns rarity based on sex. Female lifters get higher rarity for
+// the same weight milestones because they are proportionally harder feats.
+function plateRarity(maleRarity, femaleRarity) {
+  return (s) => s.sex === 'female' ? femaleRarity : maleRarity;
+}
 
 export const ACHIEVEMENTS = [
   // ═══════════════════════════════════════
-  // MILESTONE ACHIEVEMENTS
+  // MILESTONE ACHIEVEMENTS (sex-neutral)
   // ═══════════════════════════════════════
   {
     id: 'first_lift',
@@ -80,7 +87,7 @@ export const ACHIEVEMENTS = [
   },
 
   // ═══════════════════════════════════════
-  // STRENGTH TIER ACHIEVEMENTS
+  // STRENGTH TIER ACHIEVEMENTS (sex-neutral — tiers already account for BW ratio)
   // ═══════════════════════════════════════
   {
     id: 'first_beginner',
@@ -152,14 +159,19 @@ export const ACHIEVEMENTS = [
   },
 
   // ═══════════════════════════════════════
-  // PLATE CLUB ACHIEVEMENTS (lower tiers first)
+  // PLATE CLUB ACHIEVEMENTS
+  // Rarity is sex-dependent: same weight thresholds, but female lifters
+  // get higher rarity because these are proportionally harder feats.
+  //
+  // Male rarity reflects typical male strength progression.
+  // Female rarity is 1-2 tiers higher for the same weight.
   // ═══════════════════════════════════════
   {
     id: 'one_plate_bench',
     name: '1 Plate Bench',
     description: 'Bench Press 60kg / 135lbs (e1RM)',
     category: 'clubs',
-    rarity: 'common',
+    rarity: plateRarity('common', 'rare'),           // M: common, F: rare
     check: (s) => (s.e1rmMap['Bench Press'] || 0) >= 60,
   },
   {
@@ -167,7 +179,7 @@ export const ACHIEVEMENTS = [
     name: '1 Plate Squat',
     description: 'Squat 60kg / 135lbs (e1RM)',
     category: 'clubs',
-    rarity: 'common',
+    rarity: plateRarity('common', 'uncommon'),       // M: common, F: uncommon
     check: (s) => (s.e1rmMap['Squat'] || 0) >= 60,
   },
   {
@@ -175,7 +187,7 @@ export const ACHIEVEMENTS = [
     name: '1 Plate Deadlift',
     description: 'Deadlift 60kg / 135lbs (e1RM)',
     category: 'clubs',
-    rarity: 'common',
+    rarity: plateRarity('common', 'common'),         // M: common, F: common
     check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 60,
   },
   {
@@ -183,7 +195,7 @@ export const ACHIEVEMENTS = [
     name: '1 Plate OHP',
     description: 'Overhead Press 60kg / 135lbs (e1RM)',
     category: 'clubs',
-    rarity: 'uncommon',
+    rarity: plateRarity('uncommon', 'legendary'),    // M: uncommon, F: legendary
     check: (s) => (s.e1rmMap['Overhead Press'] || 0) >= 60,
   },
   {
@@ -191,7 +203,7 @@ export const ACHIEVEMENTS = [
     name: '2 Plate Squat',
     description: 'Squat 100kg / 225lbs (e1RM)',
     category: 'clubs',
-    rarity: 'uncommon',
+    rarity: plateRarity('uncommon', 'epic'),         // M: uncommon, F: epic
     check: (s) => (s.e1rmMap['Squat'] || 0) >= 100,
   },
   {
@@ -199,7 +211,7 @@ export const ACHIEVEMENTS = [
     name: '2 Plate Bench',
     description: 'Bench Press 100kg / 225lbs (e1RM)',
     category: 'clubs',
-    rarity: 'rare',
+    rarity: plateRarity('rare', 'legendary'),        // M: rare, F: legendary
     check: (s) => (s.e1rmMap['Bench Press'] || 0) >= 100,
   },
   {
@@ -207,7 +219,7 @@ export const ACHIEVEMENTS = [
     name: '2 Plate Deadlift',
     description: 'Deadlift 100kg / 225lbs (e1RM)',
     category: 'clubs',
-    rarity: 'uncommon',
+    rarity: plateRarity('uncommon', 'rare'),         // M: uncommon, F: rare
     check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 100,
   },
   {
@@ -215,7 +227,7 @@ export const ACHIEVEMENTS = [
     name: '3 Plate Squat',
     description: 'Squat 140kg / 315lbs (e1RM)',
     category: 'clubs',
-    rarity: 'rare',
+    rarity: plateRarity('rare', 'legendary'),        // M: rare, F: legendary
     check: (s) => (s.e1rmMap['Squat'] || 0) >= 140,
   },
   {
@@ -223,7 +235,7 @@ export const ACHIEVEMENTS = [
     name: '3 Plate Bench',
     description: 'Bench Press 140kg / 315lbs (e1RM)',
     category: 'clubs',
-    rarity: 'epic',
+    rarity: plateRarity('epic', 'legendary'),        // M: epic, F: legendary
     check: (s) => (s.e1rmMap['Bench Press'] || 0) >= 140,
   },
   {
@@ -231,7 +243,7 @@ export const ACHIEVEMENTS = [
     name: '3 Plate Deadlift',
     description: 'Deadlift 140kg / 315lbs (e1RM)',
     category: 'clubs',
-    rarity: 'uncommon',
+    rarity: plateRarity('uncommon', 'epic'),         // M: uncommon, F: epic
     check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 140,
   },
   {
@@ -239,7 +251,7 @@ export const ACHIEVEMENTS = [
     name: '4 Plate Squat',
     description: 'Squat 180kg / 405lbs (e1RM)',
     category: 'clubs',
-    rarity: 'epic',
+    rarity: plateRarity('epic', 'legendary'),        // M: epic, F: legendary
     check: (s) => (s.e1rmMap['Squat'] || 0) >= 180,
   },
   {
@@ -247,7 +259,7 @@ export const ACHIEVEMENTS = [
     name: '4 Plate Deadlift',
     description: 'Deadlift 180kg / 405lbs (e1RM)',
     category: 'clubs',
-    rarity: 'rare',
+    rarity: plateRarity('rare', 'legendary'),        // M: rare, F: legendary
     check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 180,
   },
   {
@@ -255,7 +267,7 @@ export const ACHIEVEMENTS = [
     name: '5 Plate Deadlift',
     description: 'Deadlift 220kg / 495lbs (e1RM)',
     category: 'clubs',
-    rarity: 'legendary',
+    rarity: plateRarity('legendary', 'legendary'),   // M: legendary, F: legendary
     check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 220,
   },
   {
@@ -263,7 +275,7 @@ export const ACHIEVEMENTS = [
     name: '1000lb Club',
     description: 'SBD total over 453kg / 1000lbs (e1RM)',
     category: 'clubs',
-    rarity: 'epic',
+    rarity: plateRarity('epic', 'legendary'),        // M: epic, F: legendary
     check: (s) => {
       const squat = s.e1rmMap['Squat'] || 0;
       const bench = s.e1rmMap['Bench Press'] || 0;
@@ -273,7 +285,7 @@ export const ACHIEVEMENTS = [
   },
 
   // ═══════════════════════════════════════
-  // SOCIAL ACHIEVEMENTS
+  // SOCIAL ACHIEVEMENTS (sex-neutral)
   // ═══════════════════════════════════════
   {
     id: 'first_friend',
@@ -301,7 +313,7 @@ export const ACHIEVEMENTS = [
   },
 
   // ═══════════════════════════════════════
-  // CONSISTENCY ACHIEVEMENTS
+  // CONSISTENCY ACHIEVEMENTS (sex-neutral)
   // ═══════════════════════════════════════
   {
     id: 'three_day_streak',
@@ -329,6 +341,17 @@ export const ACHIEVEMENTS = [
   },
 ];
 
+/**
+ * Resolve the rarity for an achievement given the current stats.
+ * Rarity can be a string or a function of stats.
+ */
+export function resolveRarity(achievement, stats) {
+  if (typeof achievement.rarity === 'function') {
+    return achievement.rarity(stats);
+  }
+  return achievement.rarity;
+}
+
 // Rarity colors for premium achievement styling
 export const RARITY_COLORS = {
   common: { bg: '#6b7280', border: '#9ca3af', glow: 'rgba(107,114,128,0.15)' },
@@ -347,7 +370,7 @@ export const BADGE_ICONS = {
   consistency: 'M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3',
 };
 
-export function computeStats({ lifts, prs, bodyweightLogs, friends, tierMap, e1rmMap, workoutDays }) {
+export function computeStats({ lifts, prs, bodyweightLogs, friends, tierMap, e1rmMap, workoutDays, sex }) {
   const tiers = Object.values(tierMap);
 
   // Calculate best weekly workout days from lift data
@@ -383,9 +406,14 @@ export function computeStats({ lifts, prs, bodyweightLogs, friends, tierMap, e1r
     friendCount: friends.length,
     bwLogCount: bodyweightLogs.length,
     bestWeeklyDays,
+    sex: sex || 'male',
   };
 }
 
 export function getEarnedAchievements(stats) {
-  return ACHIEVEMENTS.filter(a => a.check(stats));
+  return ACHIEVEMENTS.filter(a => a.check(stats)).map(a => ({
+    ...a,
+    // Resolve rarity at earn-time so it's always a string from here on
+    rarity: resolveRarity(a, stats),
+  }));
 }

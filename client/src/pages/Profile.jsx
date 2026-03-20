@@ -5,7 +5,7 @@ import { usePremium, PREMIUM_FEATURES } from '../context/PremiumContext';
 import { ProTag } from '../components/PremiumGate';
 import { useNotification } from '../context/NotificationContext';
 import { api } from '../utils/api';
-import { ACHIEVEMENTS, BADGE_ICONS, RARITY_COLORS, computeStats, getEarnedAchievements } from '../utils/achievements';
+import { ACHIEVEMENTS, BADGE_ICONS, RARITY_COLORS, computeStats, getEarnedAchievements, resolveRarity } from '../utils/achievements';
 import { calcE1RM, getTier, getPercentile, TIER_THRESHOLDS } from '../utils/benchmarks';
 import { formatWeight, inputToKg, kgToDisplay, formatDate } from '../utils/conversions';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -34,6 +34,7 @@ export default function Profile() {
 
   // Achievement state
   const [earnedAchievements, setEarnedAchievements] = useState([]);
+  const [currentStats, setCurrentStats] = useState({ sex: user?.sex || 'male' });
   const [allLifts, setAllLifts] = useState([]);
 
   // New PR badge — true if any PR was set in the last 7 days
@@ -187,7 +188,9 @@ export default function Profile() {
       tierMap,
       e1rmMap,
       workoutDays,
+      sex: user?.sex,
     });
+    setCurrentStats(stats);
     setEarnedAchievements(getEarnedAchievements(stats));
 
     if (bwKg) {
@@ -623,7 +626,8 @@ export default function Profile() {
             const isShowcased = showcaseIds.includes(achievement.id);
             const iconPath = BADGE_ICONS[achievement.category];
             const isStroke = achievement.category === 'strength' || achievement.category === 'social' || achievement.category === 'consistency';
-            const rarity = RARITY_COLORS[achievement.rarity] || RARITY_COLORS.common;
+            const resolvedRarity = resolveRarity(achievement, currentStats);
+            const rarity = RARITY_COLORS[resolvedRarity] || RARITY_COLORS.common;
             return (
               <div
                 key={achievement.id}

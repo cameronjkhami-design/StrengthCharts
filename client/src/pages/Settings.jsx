@@ -51,6 +51,38 @@ export default function Settings() {
 
       <h1 className="font-display font-extrabold text-3xl text-white mb-5">Settings</h1>
 
+      {/* Sex Selection */}
+      <div className="card mb-3">
+        <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-1">Profile</h3>
+        <p className="text-gray-500 text-[10px] mb-3">Used for achievement rarity and strength standards</p>
+        <div className="flex gap-2">
+          {[
+            { value: 'male', label: 'Male', icon: '♂' },
+            { value: 'female', label: 'Female', icon: '♀' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={async () => {
+                try {
+                  const data = await api.updateUser(user.id, { sex: opt.value });
+                  updateUser(data.user);
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
+              className={`flex-1 py-3 rounded-xl font-display font-bold text-sm uppercase transition-all flex items-center justify-center gap-2 ${
+                user.sex === opt.value
+                  ? 'bg-primary text-dark-900 border-2 border-primary'
+                  : 'bg-dark-700 text-gray-400 border border-dark-500'
+              }`}
+            >
+              <span className="text-lg">{opt.icon}</span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Weight Unit */}
       <div className="card mb-3">
         <div className="flex justify-between items-center">

@@ -90,6 +90,11 @@ async function initDb() {
   } catch (e) {
     // Column already exists — ignore
   }
+  try {
+    await db.execute({ sql: "ALTER TABLE users ADD COLUMN sex TEXT", args: [] });
+  } catch (e) {
+    // Column already exists — ignore
+  }
 }
 
 module.exports = { db, initDb };
