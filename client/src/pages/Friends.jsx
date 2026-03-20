@@ -269,12 +269,17 @@ export default function Friends() {
                     key={entry.user_id}
                     className={`card flex items-center gap-3 ${isMe ? 'border-primary/40 bg-primary/5' : ''}`}
                   >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-display font-extrabold text-xl ${
+                    <div className={`relative w-10 h-10 rounded-lg flex items-center justify-center font-display font-extrabold text-xl ${
                       rank === 1 ? 'bg-yellow-500/20 text-yellow-400' :
                       rank === 2 ? 'bg-gray-400/20 text-gray-300' :
                       rank === 3 ? 'bg-amber-700/20 text-amber-600' :
                       'bg-dark-600 text-gray-500'
                     }`}>
+                      {rank === 1 && (
+                        <svg viewBox="0 0 24 24" className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 text-yellow-400" fill="currentColor">
+                          <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5z" />
+                        </svg>
+                      )}
                       {rank}
                     </div>
 
@@ -284,6 +289,11 @@ export default function Friends() {
                           {entry.display_name}
                         </p>
                         {isMe && <span className="text-primary text-xs">(you)</span>}
+                        {rank === 1 && (
+                          <span className="text-yellow-400 text-[9px] font-display font-bold uppercase bg-yellow-400/15 px-1.5 py-0.5 rounded-full border border-yellow-400/30">
+                            👑 Leader
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         {sortBy !== 'overall' && <TierBadge tier={tierName} size="sm" />}

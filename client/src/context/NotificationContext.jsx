@@ -22,10 +22,10 @@ export function NotificationProvider({ children }) {
           {notifications.map(n => (
             <div
               key={n.id}
-              className={`mb-2 px-4 py-3 rounded-lg shadow-lg text-sm font-display font-bold uppercase tracking-wider animate-slide-down pointer-events-auto ${
+              className={`mb-2 px-4 py-3 rounded-xl shadow-2xl text-sm font-display font-bold uppercase tracking-wider animate-slide-down pointer-events-auto backdrop-blur-md ${
                 n.type === 'success' ? 'bg-green-900/90 text-green-400 border border-green-700' :
                 n.type === 'friend' ? 'bg-primary/90 text-dark-900 border border-primary' :
-                'bg-dark-700/95 text-white border border-dark-500'
+                'bg-dark-600/95 text-white border border-gray-500/40'
               }`}
             >
               {n.message}

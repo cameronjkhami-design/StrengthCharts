@@ -92,7 +92,7 @@ export default function LogPR() {
       });
       setSuccess(true);
       triggerHeavyHaptic();
-      addNotification(`${selectedExercise} PR logged!`, 'success');
+      addNotification(`${selectedExercise} logged!`, 'success');
 
       // Progressive overload encouragement
       const loggedWeight = parseFloat(weight);
@@ -216,8 +216,8 @@ export default function LogPR() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="input-field w-full box-border"
-            style={{ maxWidth: '100%' }}
+            className="input-field w-full box-border appearance-none"
+            style={{ maxWidth: '100%', minHeight: '48px', WebkitAppearance: 'none' }}
           />
         </div>
 
@@ -266,7 +266,7 @@ export default function LogPR() {
 
         {success && (
           <div className="bg-green-900/30 border border-green-700 text-green-400 text-center py-3 rounded-lg font-display font-bold uppercase">
-            PR Logged!
+            Lift Logged!
           </div>
         )}
 

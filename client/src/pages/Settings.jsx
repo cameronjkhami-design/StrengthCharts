@@ -51,6 +51,31 @@ export default function Settings() {
 
       <h1 className="font-display font-extrabold text-3xl text-white mb-5">Settings</h1>
 
+      {/* Weight Unit */}
+      <div className="card mb-3">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="font-display font-bold text-sm uppercase text-gray-400">Weight Unit</h3>
+            <p className="text-gray-500 text-[10px]">Display weights in lbs or kg</p>
+          </div>
+          <button
+            onClick={async () => {
+              const newUnit = (user?.unit_pref || 'lbs') === 'lbs' ? 'kg' : 'lbs';
+              try {
+                const data = await api.updateUser(user.id, { unit_pref: newUnit });
+                updateUser(data.user);
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            className="bg-dark-600 border border-dark-500 rounded-lg px-4 py-2 font-display font-bold text-sm"
+          >
+            {(user?.unit_pref || 'lbs') === 'lbs' ? 'LBS' : 'KG'}
+            <span className="text-gray-500 ml-2">tap to switch</span>
+          </button>
+        </div>
+      </div>
+
       {/* Theme Color */}
       <div className="card mb-3">
         <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-3">Theme Color</h3>

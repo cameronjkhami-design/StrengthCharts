@@ -38,6 +38,25 @@ export default function Profile() {
   // New PR badge — true if any PR was set in the last 7 days
   const [hasRecentPR, setHasRecentPR] = useState(false);
 
+  // Profile photo (persisted in localStorage as base64)
+  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('sc_profile_photo') || null);
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      addNotification('Photo must be under 2MB', 'info');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result;
+      localStorage.setItem('sc_profile_photo', base64);
+      setProfilePhoto(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Showcase badge selection (persisted in localStorage)
   const [showcaseIds, setShowcaseIds] = useState(() => {
     const saved = localStorage.getItem('sc_showcase');
@@ -129,16 +148,6 @@ export default function Profile() {
     }
   };
 
-  const handleToggleUnit = async () => {
-    const newUnit = unit === 'lbs' ? 'kg' : 'lbs';
-    try {
-      const data = await api.updateUser(user.id, { unit_pref: newUnit });
-      updateUser(data.user);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const handleSaveName = async () => {
     if (!displayName.trim()) return;
     setSaving(true);
@@ -203,13 +212,33 @@ export default function Profile() {
         <div className="relative">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              {/* Avatar */}
+              {/* Avatar with photo support */}
               <div className="relative">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                  <span className="font-display font-extrabold text-xl text-dark-900">
-                    {(user.display_name || user.username || '?')[0].toUpperCase()}
-                  </span>
-                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                  id="profile-photo-input"
+                />
+                <label htmlFor="profile-photo-input" className="cursor-pointer block">
+                  {profilePhoto ? (
+                    <img src={profilePhoto} alt="Profile" className="w-14 h-14 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                      <span className="font-display font-extrabold text-xl text-dark-900">
+                        {(user.display_name || user.username || '?')[0].toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  {/* Camera icon overlay */}
+                  <div className="absolute bottom-0 right-0 w-5 h-5 bg-dark-700 border border-dark-500 rounded-full flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </div>
+                </label>
                 {hasRecentPR && (
                   <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-dark-800">
                     <svg viewBox="0 0 24 24" className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
@@ -319,20 +348,6 @@ export default function Profile() {
           />
           <button onClick={handleSaveName} className="btn-secondary text-sm px-4" disabled={saving}>
             Save
-          </button>
-        </div>
-      </div>
-
-      {/* Unit Toggle */}
-      <div className="card mb-3">
-        <div className="flex justify-between items-center">
-          <span className="text-gray-400 text-sm">Weight Unit</span>
-          <button
-            onClick={handleToggleUnit}
-            className="bg-dark-600 border border-dark-500 rounded-lg px-4 py-2 font-display font-bold text-sm"
-          >
-            {unit === 'lbs' ? 'LBS' : 'KG'}
-            <span className="text-gray-500 ml-2">tap to switch</span>
           </button>
         </div>
       </div>
