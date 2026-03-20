@@ -155,14 +155,14 @@ export default function Overview() {
           <div className="w-full h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={strengthBars} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 600 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} interval={0} />
+                <XAxis dataKey="name" tick={{ fill: '#d1d5db', fontSize: 10, fontWeight: 700 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} interval={0} />
                 <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3a3a3a', borderRadius: 8, fontSize: 12 }}
                   formatter={(value, name, props) => [`${value}th percentile`, props.payload.fullName]}
-                  cursor={{ fill: 'transparent' }}
+                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                 />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} activeBar={{ stroke: '#fff', strokeWidth: 1.5, fill: 'transparent' }}>
+                <Bar dataKey="value" radius={[4, 4, 0, 0]} activeBar={{ stroke: '#fff', strokeWidth: 2 }}>
                   {strengthBars.map((entry, idx) => (
                     <Cell key={idx} fill={entry.color} />
                   ))}

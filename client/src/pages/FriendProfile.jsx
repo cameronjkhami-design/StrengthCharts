@@ -187,7 +187,7 @@ export default function FriendProfile() {
           )}
 
           {/* Showcased Badges */}
-          {privacy.showAchievements && profile.showcase_badges?.length > 0 && (() => {
+          {profile.showcase_badges?.length > 0 && (() => {
             const showcased = profile.showcase_badges
               .map(id => ACHIEVEMENTS.find(a => a.id === id))
               .filter(Boolean);

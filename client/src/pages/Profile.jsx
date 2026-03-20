@@ -122,6 +122,21 @@ export default function Profile() {
     return [];
   });
 
+  // Sync showcase + photo to server on first load (for users who set them before server storage existed)
+  useEffect(() => {
+    const updates = {};
+    if (showcaseIds.length > 0 && !user?.showcase_badges) {
+      updates.showcase_badges = showcaseIds;
+    }
+    const localPhoto = localStorage.getItem('sc_profile_photo');
+    if (localPhoto && !user?.profile_photo) {
+      updates.profile_photo = localPhoto;
+    }
+    if (Object.keys(updates).length > 0) {
+      api.updateUser(user.id, updates).then(d => updateUser(d.user)).catch(console.error);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Overall percentile
   const [overallPercentile, setOverallPercentile] = useState(null);
 
