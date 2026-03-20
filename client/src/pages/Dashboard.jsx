@@ -277,10 +277,10 @@ function OverlayChart({ logs, unit }) {
             onClick={() => toggleLift(ex)}
             className={`px-2.5 py-1 rounded-full text-[10px] font-display font-bold uppercase transition-all ${
               selectedLifts.includes(ex)
-                ? 'text-dark-900 scale-105'
+                ? 'bg-transparent scale-105'
                 : 'bg-dark-700 text-gray-400 border border-dark-500'
             }`}
-            style={selectedLifts.includes(ex) ? { backgroundColor: COLORS[ex] } : undefined}
+            style={selectedLifts.includes(ex) ? { color: COLORS[ex], borderWidth: '1.5px', borderStyle: 'solid', borderColor: COLORS[ex] } : undefined}
           >
             {ex}
           </button>

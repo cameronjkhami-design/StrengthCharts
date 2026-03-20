@@ -291,7 +291,7 @@ export default function Friends() {
                         {isMe && <span className="text-primary text-xs">(you)</span>}
                         {rank === 1 && (
                           <span className="text-yellow-400 text-[9px] font-display font-bold uppercase bg-yellow-400/15 px-1.5 py-0.5 rounded-full border border-yellow-400/30">
-                            👑 Leader
+                            👑 Friend Group Leader
                           </span>
                         )}
                       </div>

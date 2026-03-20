@@ -225,17 +225,6 @@ export default function MyLifts() {
                   />
                 )}
 
-                {/* Delete Category Button */}
-                <button
-                  onClick={handleDeleteCategory}
-                  className="mt-3 text-red-400/60 text-xs font-display font-bold uppercase flex items-center gap-1 hover:text-red-400 transition-colors"
-                >
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                  </svg>
-                  Delete All {selectedExercise}
-                </button>
               </div>
 
               {/* Chart */}
@@ -282,9 +271,21 @@ export default function MyLifts() {
 
               {/* History */}
               <div className="card">
-                <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-3">
-                  History
-                </h3>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-display font-bold text-sm uppercase text-gray-400">
+                    History
+                  </h3>
+                  <button
+                    onClick={handleDeleteCategory}
+                    className="text-red-400/60 text-[10px] font-display font-bold uppercase flex items-center gap-1 hover:text-red-400 transition-colors"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                    </svg>
+                    Delete All
+                  </button>
+                </div>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {logs.map(log => (
                     <div key={log.id} className="flex justify-between items-center py-2 border-b border-dark-600 last:border-0 group">
@@ -296,7 +297,7 @@ export default function MyLifts() {
                         {log.notes && <p className="text-gray-500 text-xs truncate">{log.notes}</p>}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <span className="text-gray-500 text-xs">{formatDate(log.logged_at)}</span>
+                        <span className="text-gray-500 text-xs whitespace-nowrap w-[85px] text-right">{formatDate(log.logged_at)}</span>
                         <button
                           onClick={() => handleDeleteLift(log)}
                           className="text-gray-600 hover:text-red-400 transition-colors p-1"
