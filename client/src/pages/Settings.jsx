@@ -107,10 +107,11 @@ export default function Settings() {
 
       {/* Haptics Toggle */}
       <div className="card mb-3">
-        <div className="flex items-center justify-between">
+        <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-3">Haptics</h3>
+        <div className="flex items-center justify-between py-2 px-3 bg-dark-700 rounded-lg">
           <div>
-            <h3 className="font-display font-bold text-sm uppercase text-gray-400">Haptics</h3>
-            <p className="text-gray-500 text-[10px]">Vibration feedback on taps</p>
+            <p className="text-white text-sm font-display font-semibold">Vibration Feedback</p>
+            <p className="text-gray-500 text-[10px]">Haptic feedback on taps and actions</p>
           </div>
           <button
             onClick={handleToggleHaptics}

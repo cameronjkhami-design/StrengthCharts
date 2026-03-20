@@ -1,17 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePremium, PREMIUM_FEATURES } from '../context/PremiumContext';
 import { ProTag } from '../components/PremiumGate';
 import { useNotification } from '../context/NotificationContext';
 import { api } from '../utils/api';
-import { ACHIEVEMENTS, BADGE_ICONS, computeStats, getEarnedAchievements } from '../utils/achievements';
+import { ACHIEVEMENTS, BADGE_ICONS, RARITY_COLORS, computeStats, getEarnedAchievements } from '../utils/achievements';
 import { calcE1RM, getTier, getPercentile, TIER_THRESHOLDS } from '../utils/benchmarks';
 import { formatWeight, inputToKg, kgToDisplay, formatDate } from '../utils/conversions';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ProUpgradeModal from '../components/ProUpgradeModal';
 import { usePurchases } from '../hooks/usePurchases';
 import { getPrimaryColor } from '../utils/colors';
+import { getDailyTips } from '../utils/tips';
 
 export default function Profile() {
   const { user, updateUser, logout } = useAuth();
@@ -40,21 +41,103 @@ export default function Profile() {
 
   // Profile photo (persisted in localStorage as base64)
   const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('sc_profile_photo') || null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [rawImage, setRawImage] = useState(null);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const canvasRef = useRef(null);
+  const imgRef = useRef(null);
 
-  const handlePhotoChange = (e) => {
+  // Workout tracker (localStorage)
+  const [workoutDays, setWorkoutDays] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('sc_workout_days')) || [];
+    } catch { return []; }
+  });
+
+  // Daily tips
+  const [tips, setTips] = useState([]);
+  const [showTips, setShowTips] = useState(false);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const workedOutToday = workoutDays.includes(todayStr);
+
+  const handleToggleWorkout = () => {
+    let next;
+    if (workedOutToday) {
+      next = workoutDays.filter(d => d !== todayStr);
+    } else {
+      next = [...workoutDays, todayStr];
+    }
+    setWorkoutDays(next);
+    localStorage.setItem('sc_workout_days', JSON.stringify(next));
+    if (!workedOutToday) {
+      addNotification('Workout logged! Keep it up!', 'success');
+    }
+  };
+
+  // Consistency rating: days worked out in last 7 days
+  const getConsistency = () => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    const liftDays = new Set();
+    for (const log of allLifts) {
+      const d = new Date(log.logged_at).toISOString().split('T')[0];
+      if (new Date(d) >= sevenDaysAgo) liftDays.add(d);
+    }
+    const allDays = new Set([...workoutDays.filter(d => new Date(d) >= sevenDaysAgo), ...liftDays]);
+    return allDays.size;
+  };
+
+  const consistencyDays = getConsistency();
+  const consistencyRating =
+    consistencyDays >= 6 ? 'Elite' :
+    consistencyDays >= 4 ? 'Strong' :
+    consistencyDays >= 2 ? 'Building' :
+    consistencyDays >= 1 ? 'Starting' : 'Rest Week';
+
+  const consistencyColor =
+    consistencyDays >= 6 ? '#f59e0b' :
+    consistencyDays >= 4 ? '#22c55e' :
+    consistencyDays >= 2 ? '#3b82f6' :
+    consistencyDays >= 1 ? '#6b7280' : '#4b5563';
+
+  // Photo compression + crop
+  const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      addNotification('Photo must be under 2MB', 'info');
-      return;
-    }
     const reader = new FileReader();
     reader.onload = () => {
-      const base64 = reader.result;
-      localStorage.setItem('sc_profile_photo', base64);
-      setProfilePhoto(base64);
+      setRawImage(reader.result);
+      setCropOffset({ x: 0, y: 0 });
+      setShowCropModal(true);
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropSave = () => {
+    const img = imgRef.current;
+    const canvas = canvasRef.current;
+    if (!img || !canvas) return;
+
+    const size = 400;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    const minDim = Math.min(img.naturalWidth, img.naturalHeight);
+    const sx = Math.max(0, Math.min((img.naturalWidth - minDim) / 2 + cropOffset.x * (minDim / 2), img.naturalWidth - minDim));
+    const sy = Math.max(0, Math.min((img.naturalHeight - minDim) / 2 + cropOffset.y * (minDim / 2), img.naturalHeight - minDim));
+
+    ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+    const compressed = canvas.toDataURL('image/jpeg', 0.7);
+    localStorage.setItem('sc_profile_photo', compressed);
+    setProfilePhoto(compressed);
+    setShowCropModal(false);
+    setRawImage(null);
+    addNotification('Profile photo updated!', 'success');
   };
 
   // Showcase badge selection (persisted in localStorage)
@@ -79,7 +162,7 @@ export default function Profile() {
       .finally(() => setLoading(false));
   }, [user.id]);
 
-  // Compute achievements
+  // Compute achievements + tips
   useEffect(() => {
     if (loading) return;
     const bwKg = bwLogs[0]?.weight_kg;
@@ -103,10 +186,10 @@ export default function Profile() {
       friends,
       tierMap,
       e1rmMap,
+      workoutDays,
     });
     setEarnedAchievements(getEarnedAchievements(stats));
 
-    // Compute overall percentile (average across ranked lifts)
     if (bwKg) {
       const percentiles = [];
       for (const [exercise, e1rm] of Object.entries(e1rmMap)) {
@@ -119,7 +202,6 @@ export default function Profile() {
         setOverallPercentile(Math.round(percentiles.reduce((a, b) => a + b, 0) / percentiles.length));
       }
     }
-    // Check for recent PRs (within last 7 days)
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const bestByExercise = {};
@@ -130,7 +212,10 @@ export default function Profile() {
       }
     }
     setHasRecentPR(Object.values(bestByExercise).some(pr => new Date(pr.logged_at) >= oneWeekAgo));
-  }, [allLifts, bwLogs, friends, loading]);
+
+    const exercises = Object.keys(e1rmMap);
+    setTips(getDailyTips({ exercises, tierMap }));
+  }, [allLifts, bwLogs, friends, loading, workoutDays]);
 
   const handleLogBW = async (e) => {
     e.preventDefault();
@@ -161,7 +246,6 @@ export default function Profile() {
     }
   };
 
-  // Chart data
   const chartData = [...bwLogs]
     .sort((a, b) => new Date(a.logged_at) - new Date(b.logged_at))
     .map(log => ({
@@ -179,14 +263,12 @@ export default function Profile() {
     );
   };
 
-  // Showcase toggle handler
   const toggleShowcase = (achievementId) => {
     setShowcaseIds(prev => {
       let next;
       if (prev.includes(achievementId)) {
         next = prev.filter(id => id !== achievementId);
       } else if (prev.length >= 3) {
-        // Replace oldest
         next = [...prev.slice(1), achievementId];
       } else {
         next = [...prev, achievementId];
@@ -196,7 +278,6 @@ export default function Profile() {
     });
   };
 
-  // Showcased badges from selected IDs (only earned ones)
   const showcasedBadges = showcaseIds
     .map(id => earnedAchievements.find(a => a.id === id))
     .filter(Boolean);
@@ -205,19 +286,17 @@ export default function Profile() {
     <div className="px-4 pt-6 pb-4 overflow-x-hidden">
       {/* Profile Header Card */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dark-800 via-dark-800 to-dark-700 border border-dark-600 p-5 mb-5">
-        {/* Decorative gradient orb */}
         <div className="absolute -top-12 -right-12 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
 
         <div className="relative">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              {/* Avatar with photo support */}
               <div className="relative">
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handlePhotoChange}
+                  onChange={handlePhotoSelect}
                   className="hidden"
                   id="profile-photo-input"
                 />
@@ -231,7 +310,6 @@ export default function Profile() {
                       </span>
                     </div>
                   )}
-                  {/* Camera icon overlay */}
                   <div className="absolute bottom-0 right-0 w-5 h-5 bg-dark-700 border border-dark-500 rounded-full flex items-center justify-center">
                     <svg viewBox="0 0 24 24" className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
@@ -308,15 +386,18 @@ export default function Profile() {
                 <div className="grid grid-cols-3 gap-2">
                   {showcasedBadges.map(a => {
                     const iconPath = BADGE_ICONS[a.category];
-                    const isStroke = a.category === 'strength' || a.category === 'social';
+                    const isStroke = a.category === 'strength' || a.category === 'social' || a.category === 'consistency';
+                    const rarity = RARITY_COLORS[a.rarity] || RARITY_COLORS.common;
                     return (
                       <div
                         key={a.id}
-                        className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 min-w-0"
+                        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 min-w-0"
+                        style={{ backgroundColor: rarity.glow, border: `1px solid ${rarity.border}40` }}
                       >
                         <svg
                           viewBox="0 0 24 24"
-                          className="w-3.5 h-3.5 text-primary flex-shrink-0"
+                          className="w-3.5 h-3.5 flex-shrink-0"
+                          style={{ color: rarity.bg }}
                           fill={isStroke ? 'none' : 'currentColor'}
                           stroke={isStroke ? 'currentColor' : 'none'}
                           strokeWidth={isStroke ? 2 : 0}
@@ -325,7 +406,7 @@ export default function Profile() {
                         >
                           <path d={iconPath} />
                         </svg>
-                        <span className="text-primary text-[10px] font-display font-bold uppercase truncate">{a.name}</span>
+                        <span className="text-[10px] font-display font-bold uppercase truncate" style={{ color: rarity.border }}>{a.name}</span>
                       </div>
                     );
                   })}
@@ -335,6 +416,115 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {/* Workout Tracker */}
+      <div className="card mb-3">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Workout Tracker
+          </h3>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-display font-bold uppercase px-2 py-0.5 rounded-full" style={{ color: consistencyColor, backgroundColor: consistencyColor + '20', border: `1px solid ${consistencyColor}40` }}>
+              {consistencyRating}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between py-3 px-4 bg-dark-700 rounded-xl mb-3">
+          <div>
+            <p className="text-white text-sm font-display font-bold">
+              {workedOutToday ? "Today's workout" : 'Did you work out today?'}
+            </p>
+            <p className="text-gray-500 text-[10px]">{consistencyDays}/7 days this week</p>
+          </div>
+          <button
+            onClick={handleToggleWorkout}
+            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${
+              workedOutToday
+                ? 'bg-green-500/20 border-2 border-green-500'
+                : 'bg-dark-600 border-2 border-dark-500'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" className={`w-6 h-6 ${workedOutToday ? 'text-green-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Week visualization */}
+        <div className="flex gap-1.5 justify-between">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - d.getDay() + i);
+            const dateStr = d.toISOString().split('T')[0];
+            const isActive = workoutDays.includes(dateStr) || allLifts.some(l => l.logged_at?.startsWith(dateStr));
+            const isToday = dateStr === todayStr;
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <span className="text-gray-500 text-[9px] font-display font-bold">{day}</span>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-display font-bold ${
+                  isActive ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
+                  isToday ? 'bg-dark-600 text-gray-400 border border-primary/30' :
+                  'bg-dark-700 text-gray-600 border border-dark-600'
+                }`}>
+                  {d.getDate()}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Training Tips */}
+      {tips.length > 0 && (
+        <div className="card mb-3">
+          <button
+            onClick={() => setShowTips(!showTips)}
+            className="w-full flex justify-between items-center"
+          >
+            <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              Training Tips
+              <ProTag />
+            </h3>
+            <svg
+              viewBox="0 0 24 24"
+              className={`w-4 h-4 text-gray-500 transition-transform ${showTips ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {showTips && (
+            <div className="space-y-2 mt-3">
+              {tips.map((t, i) => (
+                <div key={i} className="flex gap-3 py-2.5 px-3 bg-dark-700 rounded-xl">
+                  <div className="w-1 rounded-full flex-shrink-0" style={{ backgroundColor: getPrimaryColor() }} />
+                  <div className="min-w-0">
+                    {t.exercise && (
+                      <p className="text-primary text-[10px] font-display font-bold uppercase mb-0.5">{t.exercise}</p>
+                    )}
+                    <p className="text-gray-300 text-xs leading-relaxed">{t.tip}</p>
+                  </div>
+                </div>
+              ))}
+              <p className="text-gray-600 text-[10px] text-center">Tips refresh daily based on your lifts</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Edit Name */}
       <div className="card mb-3">
@@ -383,49 +573,22 @@ export default function Profile() {
           <div className="w-full h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: '#6b7280', fontSize: 10 }}
-                  axisLine={{ stroke: '#3a3a3a' }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fill: '#6b7280', fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={['dataMin - 2', 'dataMax + 2']}
-                />
+                <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} />
+                <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="weight"
-                  stroke={getPrimaryColor()}
-                  strokeWidth={2}
-                  dot={{ fill: getPrimaryColor(), r: 3 }}
-                />
+                <Line type="monotone" dataKey="weight" stroke={getPrimaryColor()} strokeWidth={2} dot={{ fill: getPrimaryColor(), r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       )}
 
-      {/* BW History — Collapsible */}
+      {/* BW History */}
       {bwLogs.length > 0 && (
         <div className="card mb-3">
-          <button
-            onClick={() => setShowBWHistory(!showBWHistory)}
-            className="w-full flex justify-between items-center"
-          >
-            <h3 className="font-display font-bold text-sm uppercase text-gray-400">
-              Bodyweight History ({bwLogs.length})
-            </h3>
-            <svg
-              viewBox="0 0 24 24"
-              className={`w-4 h-4 text-gray-500 transition-transform ${showBWHistory ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
+          <button onClick={() => setShowBWHistory(!showBWHistory)} className="w-full flex justify-between items-center">
+            <h3 className="font-display font-bold text-sm uppercase text-gray-400">Bodyweight History ({bwLogs.length})</h3>
+            <svg viewBox="0 0 24 24" className={`w-4 h-4 text-gray-500 transition-transform ${showBWHistory ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2}>
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
@@ -433,9 +596,7 @@ export default function Profile() {
             <div className="space-y-2 max-h-48 overflow-y-auto mt-3">
               {bwLogs.map(log => (
                 <div key={log.id} className="flex justify-between items-center py-1.5 border-b border-dark-600 last:border-0">
-                  <span className="text-white font-display font-semibold">
-                    {formatWeight(log.weight_kg, unit)}
-                  </span>
+                  <span className="text-white font-display font-semibold">{formatWeight(log.weight_kg, unit)}</span>
                   <span className="text-gray-500 text-xs">{formatDate(log.logged_at)}</span>
                 </div>
               ))}
@@ -456,51 +617,43 @@ export default function Profile() {
           </span>
         </div>
 
-        {/* Badge Grid */}
         <div className="grid grid-cols-4 gap-2 mb-4">
           {ACHIEVEMENTS.map(achievement => {
             const earned = earnedAchievements.some(a => a.id === achievement.id);
             const isShowcased = showcaseIds.includes(achievement.id);
             const iconPath = BADGE_ICONS[achievement.category];
-            const isStroke = achievement.category === 'strength' || achievement.category === 'social';
+            const isStroke = achievement.category === 'strength' || achievement.category === 'social' || achievement.category === 'consistency';
+            const rarity = RARITY_COLORS[achievement.rarity] || RARITY_COLORS.common;
             return (
               <div
                 key={achievement.id}
                 onClick={() => earned && toggleShowcase(achievement.id)}
                 className={`relative flex flex-col items-center p-2.5 rounded-xl transition-all ${
                   earned ? 'cursor-pointer active:scale-95' : ''
-                } ${
-                  isShowcased
-                    ? 'bg-gradient-to-b from-primary/25 to-primary/10 border-2 border-primary shadow-lg shadow-primary/10'
-                    : earned
-                    ? 'bg-gradient-to-b from-primary/15 to-primary/5 border border-primary/30 shadow-lg shadow-primary/5'
-                    : 'bg-dark-700/50 border border-dark-600 opacity-30'
-                }`}
+                } ${isShowcased ? 'shadow-lg' : earned ? 'shadow-md' : 'opacity-30'}`}
+                style={earned ? {
+                  background: `linear-gradient(to bottom, ${rarity.glow}, transparent)`,
+                  border: isShowcased ? `2px solid ${rarity.border}` : `1px solid ${rarity.border}40`,
+                  boxShadow: isShowcased ? `0 0 12px ${rarity.glow}` : undefined,
+                } : {
+                  backgroundColor: 'rgba(42,42,42,0.5)',
+                  border: '1px solid rgba(58,58,58,1)',
+                }}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 ${
-                  earned ? 'bg-primary/20' : 'bg-dark-600'
-                }`}>
-                  <svg
-                    viewBox="0 0 24 24"
-                    className={`w-4 h-4 ${earned ? 'text-primary' : 'text-gray-600'}`}
-                    fill={isStroke ? 'none' : 'currentColor'}
-                    stroke={isStroke ? 'currentColor' : 'none'}
-                    strokeWidth={isStroke ? 2 : 0}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center mb-1.5"
+                  style={earned ? { backgroundColor: rarity.bg + '30' } : { backgroundColor: '#2a2a2a' }}>
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" style={{ color: earned ? rarity.bg : '#4b5563' }}
+                    fill={isStroke ? 'none' : 'currentColor'} stroke={isStroke ? 'currentColor' : 'none'}
+                    strokeWidth={isStroke ? 2 : 0} strokeLinecap="round" strokeLinejoin="round">
                     <path d={iconPath} />
                   </svg>
                 </div>
-                <span className={`text-[8px] font-display font-bold uppercase text-center leading-tight ${
-                  earned ? 'text-white' : 'text-gray-600'
-                }`}>
+                <span className={`text-[8px] font-display font-bold uppercase text-center leading-tight ${earned ? 'text-white' : 'text-gray-600'}`}>
                   {achievement.name}
                 </span>
                 {earned && (
-                  <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center ${
-                    isShowcased ? 'bg-primary' : 'bg-primary/70'
-                  }`}>
+                  <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: isShowcased ? rarity.bg : rarity.bg + 'B3' }}>
                     {isShowcased ? (
                       <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 text-dark-900" fill="currentColor">
                         <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.5l-4.8 2.4.9-5.4L4.2 7.7l5.4-.8z" />
@@ -512,35 +665,34 @@ export default function Profile() {
                     )}
                   </div>
                 )}
+                {earned && <div className="w-1.5 h-1.5 rounded-full mt-1" style={{ backgroundColor: rarity.bg }} />}
               </div>
             );
           })}
         </div>
 
-        {/* Earned List */}
         {earnedAchievements.length > 0 && (
           <div className="space-y-1.5">
             {earnedAchievements.map(a => {
-              const isStroke = a.category === 'strength' || a.category === 'social';
+              const isStroke = a.category === 'strength' || a.category === 'social' || a.category === 'consistency';
+              const rarity = RARITY_COLORS[a.rarity] || RARITY_COLORS.common;
               return (
-                <div key={a.id} className="flex items-center gap-3 py-2 px-3 bg-dark-700/50 rounded-xl">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="w-4 h-4 text-primary"
-                      fill={isStroke ? 'none' : 'currentColor'}
-                      stroke={isStroke ? 'currentColor' : 'none'}
-                      strokeWidth={isStroke ? 2 : 0}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
+                <div key={a.id} className="flex items-center gap-3 py-2 px-3 rounded-xl" style={{ backgroundColor: rarity.glow }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: rarity.bg + '20' }}>
+                    <svg viewBox="0 0 24 24" className="w-4 h-4" style={{ color: rarity.bg }}
+                      fill={isStroke ? 'none' : 'currentColor'} stroke={isStroke ? 'currentColor' : 'none'}
+                      strokeWidth={isStroke ? 2 : 0} strokeLinecap="round" strokeLinejoin="round">
                       <path d={BADGE_ICONS[a.category]} />
                     </svg>
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-white text-xs font-display font-bold uppercase truncate">{a.name}</p>
                     <p className="text-gray-500 text-[10px] truncate">{a.description}</p>
                   </div>
+                  <span className="text-[8px] font-display font-bold uppercase px-1.5 py-0.5 rounded-full flex-shrink-0"
+                    style={{ color: rarity.border, backgroundColor: rarity.bg + '20', border: `1px solid ${rarity.border}30` }}>
+                    {a.rarity}
+                  </span>
                 </div>
               );
             })}
@@ -557,36 +709,51 @@ export default function Profile() {
               <p className="font-display font-bold text-white uppercase">Go Pro</p>
               <p className="text-gray-400 text-xs">$2.99/mo — unlock all features</p>
             </div>
-            <button
-              onClick={() => setShowUpgradeModal(true)}
-              className="bg-primary text-dark-900 font-display font-bold text-sm px-5 py-2.5 rounded-xl uppercase active:scale-95 transition-transform"
-            >
+            <button onClick={() => setShowUpgradeModal(true)} className="bg-primary text-dark-900 font-display font-bold text-sm px-5 py-2.5 rounded-xl uppercase active:scale-95 transition-transform">
               Upgrade
             </button>
           </div>
         </div>
       )}
 
-      {/* Restore Purchases (native only) */}
       {!isPremium && isNative && (
-        <button
-          onClick={restorePurchases}
-          disabled={restoring}
-          className="w-full text-center text-gray-500 text-xs py-3"
-        >
+        <button onClick={restorePurchases} disabled={restoring} className="w-full text-center text-gray-500 text-xs py-3">
           {restoring ? 'Restoring...' : 'Restore Purchases'}
         </button>
       )}
 
-      {/* Logout */}
-      <button
-        onClick={logout}
-        className="w-full text-center text-red-400 text-sm py-4 font-semibold"
-      >
-        Log Out
-      </button>
+      <button onClick={logout} className="w-full text-center text-red-400 text-sm py-4 font-semibold">Log Out</button>
 
       <ProUpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+
+      {/* Photo Crop Modal */}
+      {showCropModal && rawImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6 animate-fade-in" onClick={() => setShowCropModal(false)}>
+          <div className="absolute inset-0 bg-black/80" />
+          <div className="relative bg-dark-800 border border-dark-600 rounded-2xl p-5 w-full max-w-sm animate-scale-up" onClick={e => e.stopPropagation()}>
+            <h3 className="font-display font-bold text-lg text-white uppercase mb-3">Crop Photo</h3>
+            <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-dark-900 mb-4">
+              <img ref={imgRef} src={rawImage} alt="Crop preview" className="w-full h-full object-cover"
+                style={{ objectPosition: `${50 + cropOffset.x * 25}% ${50 + cropOffset.y * 25}%` }} />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-48 h-48 rounded-full border-2 border-white/40" />
+              </div>
+            </div>
+            <div className="flex justify-center gap-3 mb-4">
+              <button onClick={() => setCropOffset(p => ({ ...p, x: Math.max(-1, p.x - 0.2) }))} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform">←</button>
+              <button onClick={() => setCropOffset(p => ({ ...p, y: Math.max(-1, p.y - 0.2) }))} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform">↑</button>
+              <button onClick={() => setCropOffset(p => ({ ...p, y: Math.min(1, p.y + 0.2) }))} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform">↓</button>
+              <button onClick={() => setCropOffset(p => ({ ...p, x: Math.min(1, p.x + 0.2) }))} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform">→</button>
+              <button onClick={() => setCropOffset({ x: 0, y: 0 })} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-gray-400 text-xs active:scale-90 transition-transform">Reset</button>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowCropModal(false); setRawImage(null); }} className="flex-1 btn-secondary text-sm py-2.5">Cancel</button>
+              <button onClick={handleCropSave} className="flex-1 btn-primary text-sm py-2.5">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }
