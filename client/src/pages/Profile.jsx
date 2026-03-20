@@ -41,12 +41,15 @@ export default function Profile() {
   const [hasRecentPR, setHasRecentPR] = useState(false);
 
   // Profile photo (persisted in localStorage as base64)
-  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('sc_profile_photo') || null);
+  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('sc_profile_photo') || user?.profile_photo || null);
   const [showCropModal, setShowCropModal] = useState(false);
   const [rawImage, setRawImage] = useState(null);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const [cropScale, setCropScale] = useState(1);
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
+  const cropContainerRef = useRef(null);
+  const dragRef = useRef({ dragging: false, lastX: 0, lastY: 0, initialDist: 0, initialScale: 1 });
 
   // Workout tracker (localStorage)
   const [workoutDays, setWorkoutDays] = useState(() => {
@@ -59,49 +62,7 @@ export default function Profile() {
   const [tips, setTips] = useState([]);
   const [showTips, setShowTips] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const workedOutToday = workoutDays.includes(todayStr);
-
-  const handleToggleWorkout = () => {
-    let next;
-    if (workedOutToday) {
-      next = workoutDays.filter(d => d !== todayStr);
-    } else {
-      next = [...workoutDays, todayStr];
-    }
-    setWorkoutDays(next);
-    localStorage.setItem('sc_workout_days', JSON.stringify(next));
-    if (!workedOutToday) {
-      addNotification('Workout logged! Keep it up!', 'success');
-    }
-  };
-
-  // Consistency rating: days worked out in last 7 days
-  const getConsistency = () => {
-    const now = new Date();
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(now.getDate() - 7);
-    const liftDays = new Set();
-    for (const log of allLifts) {
-      const d = new Date(log.logged_at).toISOString().split('T')[0];
-      if (new Date(d) >= sevenDaysAgo) liftDays.add(d);
-    }
-    const allDays = new Set([...workoutDays.filter(d => new Date(d) >= sevenDaysAgo), ...liftDays]);
-    return allDays.size;
-  };
-
-  const consistencyDays = getConsistency();
-  const consistencyRating =
-    consistencyDays >= 6 ? 'Elite' :
-    consistencyDays >= 4 ? 'Strong' :
-    consistencyDays >= 2 ? 'Building' :
-    consistencyDays >= 1 ? 'Starting' : 'Rest Week';
-
-  const consistencyColor =
-    consistencyDays >= 6 ? '#f59e0b' :
-    consistencyDays >= 4 ? '#22c55e' :
-    consistencyDays >= 2 ? '#3b82f6' :
-    consistencyDays >= 1 ? '#6b7280' : '#4b5563';
+  // (Workout tracker moved to Dashboard — workoutDays still used for achievement consistency calculations)
 
   // Photo compression + crop
   const handlePhotoSelect = (e) => {
@@ -111,6 +72,7 @@ export default function Profile() {
     reader.onload = () => {
       setRawImage(reader.result);
       setCropOffset({ x: 0, y: 0 });
+      setCropScale(1);
       setShowCropModal(true);
     };
     reader.readAsDataURL(file);
@@ -128,10 +90,13 @@ export default function Profile() {
     const ctx = canvas.getContext('2d');
 
     const minDim = Math.min(img.naturalWidth, img.naturalHeight);
-    const sx = Math.max(0, Math.min((img.naturalWidth - minDim) / 2 + cropOffset.x * (minDim / 2), img.naturalWidth - minDim));
-    const sy = Math.max(0, Math.min((img.naturalHeight - minDim) / 2 + cropOffset.y * (minDim / 2), img.naturalHeight - minDim));
+    const cropDim = minDim / cropScale;
+    const cx = (img.naturalWidth - cropDim) / 2 + cropOffset.x * (cropDim / 2);
+    const cy = (img.naturalHeight - cropDim) / 2 + cropOffset.y * (cropDim / 2);
+    const sx = Math.max(0, Math.min(cx, img.naturalWidth - cropDim));
+    const sy = Math.max(0, Math.min(cy, img.naturalHeight - cropDim));
 
-    ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+    ctx.drawImage(img, sx, sy, cropDim, cropDim, 0, 0, size, size);
 
     const compressed = canvas.toDataURL('image/jpeg', 0.7);
     localStorage.setItem('sc_profile_photo', compressed);
@@ -139,12 +104,22 @@ export default function Profile() {
     setShowCropModal(false);
     setRawImage(null);
     addNotification('Profile photo updated!', 'success');
+    // Sync to server so friends can see it
+    api.updateUser(user.id, { profile_photo: compressed }).then(d => updateUser(d.user)).catch(console.error);
   };
 
   // Showcase badge selection (persisted in localStorage)
   const [showcaseIds, setShowcaseIds] = useState(() => {
     const saved = localStorage.getItem('sc_showcase');
-    return saved ? JSON.parse(saved) : [];
+    if (saved) return JSON.parse(saved);
+    // Fallback to server data
+    if (user?.showcase_badges) {
+      try {
+        const parsed = typeof user.showcase_badges === 'string' ? JSON.parse(user.showcase_badges) : user.showcase_badges;
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
   });
 
   // Overall percentile
@@ -174,6 +149,15 @@ export default function Profile() {
         e1rmMap[log.exercise_name] = e1rm;
       }
     }
+    // Build actual 1RM map: max weight_kg per exercise where reps === 1
+    const actual1rmMap = {};
+    for (const log of allLifts) {
+      if (log.reps === 1) {
+        if (!actual1rmMap[log.exercise_name] || log.weight_kg > actual1rmMap[log.exercise_name]) {
+          actual1rmMap[log.exercise_name] = log.weight_kg;
+        }
+      }
+    }
     const tierMap = {};
     for (const [exercise, e1rm] of Object.entries(e1rmMap)) {
       const ratio = bwKg ? e1rm / bwKg : 0;
@@ -187,6 +171,7 @@ export default function Profile() {
       friends,
       tierMap,
       e1rmMap,
+      actual1rmMap,
       workoutDays,
       sex: user?.sex,
     });
@@ -277,6 +262,8 @@ export default function Profile() {
         next = [...prev, achievementId];
       }
       localStorage.setItem('sc_showcase', JSON.stringify(next));
+      // Sync to server so friends can see showcase
+      api.updateUser(user.id, { showcase_badges: next }).then(d => updateUser(d.user)).catch(console.error);
       return next;
     });
   };
@@ -417,70 +404,6 @@ export default function Profile() {
               )}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Workout Tracker */}
-      <div className="card mb-3">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-            Workout Tracker
-          </h3>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-display font-bold uppercase px-2 py-0.5 rounded-full" style={{ color: consistencyColor, backgroundColor: consistencyColor + '20', border: `1px solid ${consistencyColor}40` }}>
-              {consistencyRating}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between py-3 px-4 bg-dark-700 rounded-xl mb-3">
-          <div>
-            <p className="text-white text-sm font-display font-bold">
-              {workedOutToday ? "Today's workout" : 'Did you work out today?'}
-            </p>
-            <p className="text-gray-500 text-[10px]">{consistencyDays}/7 days this week</p>
-          </div>
-          <button
-            onClick={handleToggleWorkout}
-            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${
-              workedOutToday
-                ? 'bg-green-500/20 border-2 border-green-500'
-                : 'bg-dark-600 border-2 border-dark-500'
-            }`}
-          >
-            <svg viewBox="0 0 24 24" className={`w-6 h-6 ${workedOutToday ? 'text-green-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Week visualization */}
-        <div className="flex gap-1.5 justify-between">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - d.getDay() + i);
-            const dateStr = d.toISOString().split('T')[0];
-            const isActive = workoutDays.includes(dateStr) || allLifts.some(l => l.logged_at?.startsWith(dateStr));
-            const isToday = dateStr === todayStr;
-            return (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-gray-500 text-[9px] font-display font-bold">{day}</span>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-display font-bold ${
-                  isActive ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
-                  isToday ? 'bg-dark-600 text-gray-400 border border-primary/30' :
-                  'bg-dark-700 text-gray-600 border border-dark-600'
-                }`}>
-                  {d.getDate()}
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
 
@@ -735,22 +658,80 @@ export default function Profile() {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6 animate-fade-in" onClick={() => setShowCropModal(false)}>
           <div className="absolute inset-0 bg-black/80" />
           <div className="relative bg-dark-800 border border-dark-600 rounded-2xl p-5 w-full max-w-sm animate-scale-up" onClick={e => e.stopPropagation()}>
-            <h3 className="font-display font-bold text-lg text-white uppercase mb-3">Crop Photo</h3>
-            <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-dark-900 mb-4">
-              <img ref={imgRef} src={rawImage} alt="Crop preview" className="w-full h-full object-cover"
-                style={{ objectPosition: `${50 + cropOffset.x * 25}% ${50 + cropOffset.y * 25}%` }} />
+            <h3 className="font-display font-bold text-lg text-white uppercase mb-2">Crop Photo</h3>
+            <p className="text-gray-500 text-[10px] mb-3">Drag to move, pinch to zoom</p>
+            <div
+              ref={cropContainerRef}
+              className="relative w-full aspect-square rounded-xl overflow-hidden bg-dark-900 mb-4 touch-none"
+              onTouchStart={(e) => {
+                if (e.touches.length === 2) {
+                  const dx = e.touches[0].clientX - e.touches[1].clientX;
+                  const dy = e.touches[0].clientY - e.touches[1].clientY;
+                  dragRef.current.initialDist = Math.hypot(dx, dy);
+                  dragRef.current.initialScale = cropScale;
+                } else if (e.touches.length === 1) {
+                  dragRef.current.dragging = true;
+                  dragRef.current.lastX = e.touches[0].clientX;
+                  dragRef.current.lastY = e.touches[0].clientY;
+                }
+              }}
+              onTouchMove={(e) => {
+                e.preventDefault();
+                if (e.touches.length === 2) {
+                  const dx = e.touches[0].clientX - e.touches[1].clientX;
+                  const dy = e.touches[0].clientY - e.touches[1].clientY;
+                  const dist = Math.hypot(dx, dy);
+                  const newScale = Math.max(1, Math.min(4, dragRef.current.initialScale * (dist / dragRef.current.initialDist)));
+                  setCropScale(newScale);
+                } else if (e.touches.length === 1 && dragRef.current.dragging) {
+                  const container = cropContainerRef.current;
+                  const rect = container?.getBoundingClientRect();
+                  const w = rect?.width || 300;
+                  const dx = (e.touches[0].clientX - dragRef.current.lastX) / (w / 2);
+                  const dy = (e.touches[0].clientY - dragRef.current.lastY) / (w / 2);
+                  dragRef.current.lastX = e.touches[0].clientX;
+                  dragRef.current.lastY = e.touches[0].clientY;
+                  setCropOffset(p => ({
+                    x: Math.max(-1, Math.min(1, p.x - dx)),
+                    y: Math.max(-1, Math.min(1, p.y - dy)),
+                  }));
+                }
+              }}
+              onTouchEnd={() => { dragRef.current.dragging = false; }}
+              onMouseDown={(e) => {
+                dragRef.current.dragging = true;
+                dragRef.current.lastX = e.clientX;
+                dragRef.current.lastY = e.clientY;
+              }}
+              onMouseMove={(e) => {
+                if (!dragRef.current.dragging) return;
+                const container = cropContainerRef.current;
+                const rect = container?.getBoundingClientRect();
+                const w = rect?.width || 300;
+                const dx = (e.clientX - dragRef.current.lastX) / (w / 2);
+                const dy = (e.clientY - dragRef.current.lastY) / (w / 2);
+                dragRef.current.lastX = e.clientX;
+                dragRef.current.lastY = e.clientY;
+                setCropOffset(p => ({
+                  x: Math.max(-1, Math.min(1, p.x - dx)),
+                  y: Math.max(-1, Math.min(1, p.y - dy)),
+                }));
+              }}
+              onMouseUp={() => { dragRef.current.dragging = false; }}
+              onMouseLeave={() => { dragRef.current.dragging = false; }}
+            >
+              <img ref={imgRef} src={rawImage} alt="Crop preview" className="w-full h-full object-cover select-none pointer-events-none"
+                style={{
+                  transform: `scale(${cropScale})`,
+                  objectPosition: `${50 + cropOffset.x * 25}% ${50 + cropOffset.y * 25}%`,
+                  transition: 'transform 0.05s ease-out',
+                }} draggable={false} />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-48 h-48 rounded-full border-2 border-white/40" />
               </div>
             </div>
-            <div className="flex justify-center gap-3 mb-4">
-              <button onClick={() => setCropOffset(p => ({ ...p, x: Math.max(-1, p.x - 0.2) }))} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform">←</button>
-              <button onClick={() => setCropOffset(p => ({ ...p, y: Math.max(-1, p.y - 0.2) }))} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform">↑</button>
-              <button onClick={() => setCropOffset(p => ({ ...p, y: Math.min(1, p.y + 0.2) }))} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform">↓</button>
-              <button onClick={() => setCropOffset(p => ({ ...p, x: Math.min(1, p.x + 0.2) }))} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-white active:scale-90 transition-transform">→</button>
-              <button onClick={() => setCropOffset({ x: 0, y: 0 })} className="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center text-gray-400 text-xs active:scale-90 transition-transform">Reset</button>
-            </div>
             <div className="flex gap-3">
+              <button onClick={() => { setCropOffset({ x: 0, y: 0 }); setCropScale(1); }} className="px-3 py-2.5 bg-dark-600 rounded-xl text-gray-400 text-xs font-display font-bold uppercase active:scale-95 transition-transform">Reset</button>
               <button onClick={() => { setShowCropModal(false); setRawImage(null); }} className="flex-1 btn-secondary text-sm py-2.5">Cancel</button>
               <button onClick={handleCropSave} className="flex-1 btn-primary text-sm py-2.5">Save</button>
             </div>

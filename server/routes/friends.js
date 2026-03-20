@@ -47,7 +47,7 @@ router.get('/search', async (req, res) => {
 // GET /api/friends/:userId — list accepted friends
 router.get('/:userId', async (req, res) => {
   const result = await db.execute({
-    sql: `SELECT u.id, u.username, u.display_name
+    sql: `SELECT u.id, u.username, u.display_name, u.profile_photo
           FROM friendships f
           JOIN users u ON u.id = f.friend_id
           WHERE f.user_id = ? AND f.status = 'accepted'
@@ -167,7 +167,7 @@ router.get('/:userId/profile/:friendId', async (req, res) => {
 
   // Get friend's user info + privacy settings
   const userResult = await db.execute({
-    sql: 'SELECT id, username, display_name, unit_pref, is_premium, privacy_settings, created_at FROM users WHERE id = ?',
+    sql: 'SELECT id, username, display_name, unit_pref, is_premium, privacy_settings, profile_photo, showcase_badges, created_at FROM users WHERE id = ?',
     args: [friendId]
   });
   if (userResult.rows.length === 0) {
@@ -188,11 +188,20 @@ router.get('/:userId/profile/:friendId', async (req, res) => {
   const showBodyweight = privacy.show_bodyweight !== false;
   const showAchievements = privacy.show_achievements !== false;
 
+  let showcaseBadges = [];
+  try {
+    showcaseBadges = friend.showcase_badges ? JSON.parse(friend.showcase_badges) : [];
+  } catch (e) {
+    showcaseBadges = [];
+  }
+
   const profile = {
     id: friend.id,
     username: friend.username,
     display_name: friend.display_name,
     is_premium: friend.is_premium,
+    profile_photo: friend.profile_photo,
+    showcase_badges: showcaseBadges,
     created_at: friend.created_at,
     privacy: { showPrs, showLifts, showBodyweight, showAchievements },
   };

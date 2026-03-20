@@ -169,117 +169,117 @@ export const ACHIEVEMENTS = [
   {
     id: 'one_plate_bench',
     name: '1 Plate Bench',
-    description: 'Bench Press 60kg / 135lbs (e1RM)',
+    description: 'Bench Press 60kg / 135lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('common', 'rare'),           // M: common, F: rare
-    check: (s) => (s.e1rmMap['Bench Press'] || 0) >= 60,
+    check: (s) => (s.actual1rmMap?.['Bench Press'] || 0) >= 60,
   },
   {
     id: 'one_plate_squat',
     name: '1 Plate Squat',
-    description: 'Squat 60kg / 135lbs (e1RM)',
+    description: 'Squat 60kg / 135lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('common', 'uncommon'),       // M: common, F: uncommon
-    check: (s) => (s.e1rmMap['Squat'] || 0) >= 60,
+    check: (s) => (s.actual1rmMap?.['Squat'] || 0) >= 60,
   },
   {
     id: 'one_plate_deadlift',
     name: '1 Plate Deadlift',
-    description: 'Deadlift 60kg / 135lbs (e1RM)',
+    description: 'Deadlift 60kg / 135lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('common', 'common'),         // M: common, F: common
-    check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 60,
+    check: (s) => (s.actual1rmMap?.['Deadlift'] || 0) >= 60,
   },
   {
     id: 'one_plate_ohp',
     name: '1 Plate OHP',
-    description: 'Overhead Press 60kg / 135lbs (e1RM)',
+    description: 'Overhead Press 60kg / 135lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('uncommon', 'legendary'),    // M: uncommon, F: legendary
-    check: (s) => (s.e1rmMap['Overhead Press'] || 0) >= 60,
+    check: (s) => (s.actual1rmMap?.['Overhead Press'] || 0) >= 60,
   },
   {
     id: 'two_plate_squat',
     name: '2 Plate Squat',
-    description: 'Squat 100kg / 225lbs (e1RM)',
+    description: 'Squat 100kg / 225lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('uncommon', 'epic'),         // M: uncommon, F: epic
-    check: (s) => (s.e1rmMap['Squat'] || 0) >= 100,
+    check: (s) => (s.actual1rmMap?.['Squat'] || 0) >= 100,
   },
   {
     id: 'two_plate_bench',
     name: '2 Plate Bench',
-    description: 'Bench Press 100kg / 225lbs (e1RM)',
+    description: 'Bench Press 100kg / 225lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('rare', 'legendary'),        // M: rare, F: legendary
-    check: (s) => (s.e1rmMap['Bench Press'] || 0) >= 100,
+    check: (s) => (s.actual1rmMap?.['Bench Press'] || 0) >= 100,
   },
   {
     id: 'two_plate_deadlift',
     name: '2 Plate Deadlift',
-    description: 'Deadlift 100kg / 225lbs (e1RM)',
+    description: 'Deadlift 100kg / 225lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('uncommon', 'rare'),         // M: uncommon, F: rare
-    check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 100,
+    check: (s) => (s.actual1rmMap?.['Deadlift'] || 0) >= 100,
   },
   {
     id: 'three_plate_squat',
     name: '3 Plate Squat',
-    description: 'Squat 140kg / 315lbs (e1RM)',
+    description: 'Squat 140kg / 315lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('rare', 'legendary'),        // M: rare, F: legendary
-    check: (s) => (s.e1rmMap['Squat'] || 0) >= 140,
+    check: (s) => (s.actual1rmMap?.['Squat'] || 0) >= 140,
   },
   {
     id: 'three_plate_bench',
     name: '3 Plate Bench',
-    description: 'Bench Press 140kg / 315lbs (e1RM)',
+    description: 'Bench Press 140kg / 315lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('epic', 'legendary'),        // M: epic, F: legendary
-    check: (s) => (s.e1rmMap['Bench Press'] || 0) >= 140,
+    check: (s) => (s.actual1rmMap?.['Bench Press'] || 0) >= 140,
   },
   {
     id: 'three_plate_deadlift',
     name: '3 Plate Deadlift',
-    description: 'Deadlift 140kg / 315lbs (e1RM)',
+    description: 'Deadlift 140kg / 315lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('uncommon', 'epic'),         // M: uncommon, F: epic
-    check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 140,
+    check: (s) => (s.actual1rmMap?.['Deadlift'] || 0) >= 140,
   },
   {
     id: 'four_plate_squat',
     name: '4 Plate Squat',
-    description: 'Squat 180kg / 405lbs (e1RM)',
+    description: 'Squat 180kg / 405lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('epic', 'legendary'),        // M: epic, F: legendary
-    check: (s) => (s.e1rmMap['Squat'] || 0) >= 180,
+    check: (s) => (s.actual1rmMap?.['Squat'] || 0) >= 180,
   },
   {
     id: 'four_plate_deadlift',
     name: '4 Plate Deadlift',
-    description: 'Deadlift 180kg / 405lbs (e1RM)',
+    description: 'Deadlift 180kg / 405lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('rare', 'legendary'),        // M: rare, F: legendary
-    check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 180,
+    check: (s) => (s.actual1rmMap?.['Deadlift'] || 0) >= 180,
   },
   {
     id: 'five_plate_deadlift',
     name: '5 Plate Deadlift',
-    description: 'Deadlift 220kg / 495lbs (e1RM)',
+    description: 'Deadlift 220kg / 495lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('legendary', 'legendary'),   // M: legendary, F: legendary
-    check: (s) => (s.e1rmMap['Deadlift'] || 0) >= 220,
+    check: (s) => (s.actual1rmMap?.['Deadlift'] || 0) >= 220,
   },
   {
     id: 'thousand_pound_club',
     name: '1000lb Club',
-    description: 'SBD total over 453kg / 1000lbs (e1RM)',
+    description: 'SBD total over 453kg / 1000lbs (1RM)',
     category: 'clubs',
     rarity: plateRarity('epic', 'legendary'),        // M: epic, F: legendary
     check: (s) => {
-      const squat = s.e1rmMap['Squat'] || 0;
-      const bench = s.e1rmMap['Bench Press'] || 0;
-      const dead = s.e1rmMap['Deadlift'] || 0;
+      const squat = s.actual1rmMap?.['Squat'] || 0;
+      const bench = s.actual1rmMap?.['Bench Press'] || 0;
+      const dead = s.actual1rmMap?.['Deadlift'] || 0;
       return (squat + bench + dead) >= 453;
     },
   },
@@ -370,7 +370,7 @@ export const BADGE_ICONS = {
   consistency: 'M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3',
 };
 
-export function computeStats({ lifts, prs, bodyweightLogs, friends, tierMap, e1rmMap, workoutDays, sex }) {
+export function computeStats({ lifts, prs, bodyweightLogs, friends, tierMap, e1rmMap, actual1rmMap, workoutDays, sex }) {
   const tiers = Object.values(tierMap);
 
   // Calculate best weekly workout days from lift data
@@ -403,6 +403,7 @@ export function computeStats({ lifts, prs, bodyweightLogs, friends, tierMap, e1r
     tiers,
     tierMap,
     e1rmMap,
+    actual1rmMap: actual1rmMap || {},
     friendCount: friends.length,
     bwLogCount: bodyweightLogs.length,
     bestWeeklyDays,

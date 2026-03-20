@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { usePremium, PREMIUM_FEATURES } from '../context/PremiumContext';
 import { api } from '../utils/api';
 import { getTier, calcE1RM, getPercentile, MAIN_LIFTS, TIER_ORDER, TIER_COLORS } from '../utils/benchmarks';
@@ -14,11 +15,41 @@ import { getPrimaryColor } from '../utils/colors';
 export default function Dashboard() {
   const { user } = useAuth();
   const { isPremium } = usePremium();
+  const { addNotification } = useNotification();
   const [prs, setPrs] = useState([]);
   const [allLogs, setAllLogs] = useState([]);
   const [bodyweight, setBodyweight] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLegend, setShowLegend] = useState(false);
+
+  // Workout tracker (localStorage)
+  const [workoutDays, setWorkoutDays] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sc_workout_days')) || []; } catch { return []; }
+  });
+  const todayStr = new Date().toISOString().split('T')[0];
+  const workedOutToday = workoutDays.includes(todayStr);
+  const handleToggleWorkout = () => {
+    let next;
+    if (workedOutToday) {
+      next = workoutDays.filter(d => d !== todayStr);
+    } else {
+      next = [...workoutDays, todayStr];
+    }
+    setWorkoutDays(next);
+    localStorage.setItem('sc_workout_days', JSON.stringify(next));
+    if (!workedOutToday) addNotification('Workout logged! Keep it up!', 'success');
+  };
+  const getConsistency = () => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    const liftDays = new Set();
+    for (const log of allLogs) {
+      const d = new Date(log.logged_at).toISOString().split('T')[0];
+      if (new Date(d) >= sevenDaysAgo) liftDays.add(d);
+    }
+    return new Set([...workoutDays.filter(d => new Date(d) >= sevenDaysAgo), ...liftDays]).size;
+  };
 
   const unit = user?.unit_pref || 'lbs';
 
@@ -81,6 +112,72 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Workout Tracker */}
+      {(() => {
+        const consistencyDays = getConsistency();
+        const consistencyRating = consistencyDays >= 6 ? 'Elite' : consistencyDays >= 4 ? 'Strong' : consistencyDays >= 2 ? 'Building' : consistencyDays >= 1 ? 'Starting' : 'Rest Week';
+        const consistencyColor = consistencyDays >= 6 ? '#f59e0b' : consistencyDays >= 4 ? '#22c55e' : consistencyDays >= 2 ? '#3b82f6' : consistencyDays >= 1 ? '#6b7280' : '#4b5563';
+        return (
+          <div className="card mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                Workout Tracker
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-display font-bold uppercase px-2 py-0.5 rounded-full" style={{ color: consistencyColor, backgroundColor: consistencyColor + '20', border: `1px solid ${consistencyColor}40` }}>
+                  {consistencyRating}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between py-3 px-4 bg-dark-700 rounded-xl mb-3">
+              <div>
+                <p className="text-white text-sm font-display font-bold">
+                  {workedOutToday ? "Today's workout" : 'Did you work out today?'}
+                </p>
+                <p className="text-gray-500 text-[10px]">{consistencyDays}/7 days this week</p>
+              </div>
+              <button
+                onClick={handleToggleWorkout}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${
+                  workedOutToday ? 'bg-green-500/20 border-2 border-green-500' : 'bg-dark-600 border-2 border-dark-500'
+                }`}
+              >
+                <svg viewBox="0 0 24 24" className={`w-6 h-6 ${workedOutToday ? 'text-green-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex gap-1.5 justify-between">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - d.getDay() + i);
+                const dateStr = d.toISOString().split('T')[0];
+                const isActive = workoutDays.includes(dateStr) || allLogs.some(l => l.logged_at?.startsWith(dateStr));
+                const isToday = dateStr === todayStr;
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-gray-500 text-[9px] font-display font-bold">{day}</span>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-display font-bold ${
+                      isActive ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
+                      isToday ? 'bg-dark-600 text-gray-400 border border-primary/30' :
+                      'bg-dark-700 text-gray-600 border border-dark-600'
+                    }`}>
+                      {d.getDate()}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Quick Log Button */}
       <Link to="/log" className="btn-primary w-full block text-center mb-6">

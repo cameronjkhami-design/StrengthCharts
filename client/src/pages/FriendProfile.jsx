@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
 import { calcE1RM, getTier, getPercentile, TIER_THRESHOLDS, MAIN_LIFTS } from '../utils/benchmarks';
 import { formatWeight, kgToDisplay, formatDateShort } from '../utils/conversions';
+import { ACHIEVEMENTS, BADGE_ICONS, RARITY_COLORS } from '../utils/achievements';
 import TierBadge from '../components/TierBadge';
 import ProgressBar from '../components/ProgressBar';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -140,11 +141,15 @@ export default function FriendProfile() {
 
         <div className="relative">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-              <span className="font-display font-extrabold text-xl text-dark-900">
-                {(profile.display_name || profile.username || '?')[0].toUpperCase()}
-              </span>
-            </div>
+            {profile.profile_photo ? (
+              <img src={profile.profile_photo} alt="" className="w-14 h-14 rounded-full object-cover" />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                <span className="font-display font-extrabold text-xl text-dark-900">
+                  {(profile.display_name || profile.username || '?')[0].toUpperCase()}
+                </span>
+              </div>
+            )}
             <div>
               <h1 className="font-display font-extrabold text-2xl text-white">
                 {profile.display_name || profile.username}
@@ -180,6 +185,50 @@ export default function FriendProfile() {
               <span className="text-white font-display font-bold text-sm">{formatWeight(bwKg, unit)}</span>
             </div>
           )}
+
+          {/* Showcased Badges */}
+          {privacy.showAchievements && profile.showcase_badges?.length > 0 && (() => {
+            const showcased = profile.showcase_badges
+              .map(id => ACHIEVEMENTS.find(a => a.id === id))
+              .filter(Boolean);
+            if (showcased.length === 0) return null;
+            return (
+              <div className="mt-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-gray-500 text-[10px] uppercase tracking-wider">Showcase</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {showcased.map(a => {
+                    const iconPath = BADGE_ICONS[a.category];
+                    const isStroke = a.category === 'strength' || a.category === 'social' || a.category === 'consistency';
+                    const rarityStr = typeof a.rarity === 'function' ? 'common' : a.rarity;
+                    const rarity = RARITY_COLORS[rarityStr] || RARITY_COLORS.common;
+                    return (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 min-w-0"
+                        style={{ backgroundColor: rarity.glow, border: `1px solid ${rarity.border}40` }}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="w-3.5 h-3.5 flex-shrink-0"
+                          style={{ color: rarity.bg }}
+                          fill={isStroke ? 'none' : 'currentColor'}
+                          stroke={isStroke ? 'currentColor' : 'none'}
+                          strokeWidth={isStroke ? 2 : 0}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d={iconPath} />
+                        </svg>
+                        <span className="text-[10px] font-display font-bold uppercase truncate" style={{ color: rarity.border }}>{a.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

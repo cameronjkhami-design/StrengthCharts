@@ -129,17 +129,26 @@ export default function Friends() {
     }
   };
 
-  const handleRemoveFriend = async (friendId, e) => {
+  const [confirmRemove, setConfirmRemove] = useState(null); // friendId to confirm removal
+
+  const handleRemoveFriend = (friendId, e) => {
     e.stopPropagation();
+    setConfirmRemove(friendId);
+  };
+
+  const confirmRemoveFriend = async () => {
+    if (!confirmRemove) return;
     try {
-      await api.removeFriend(user.id, friendId);
-      setFriends(prev => prev.filter(f => f.id !== friendId));
+      await api.removeFriend(user.id, confirmRemove);
+      setFriends(prev => prev.filter(f => f.id !== confirmRemove));
       setSearchResults(prev => prev.map(u =>
-        u.id === friendId ? { ...u, friend_status: 'none' } : u
+        u.id === confirmRemove ? { ...u, friend_status: 'none' } : u
       ));
+      addNotification('Friend removed', 'info');
     } catch (err) {
       console.error(err);
     }
+    setConfirmRemove(null);
   };
 
   if (loading) {
@@ -456,11 +465,15 @@ export default function Friends() {
               className="flex items-center justify-between py-3 px-4 bg-dark-800 border border-dark-600 rounded-xl cursor-pointer active:scale-[0.98] transition-transform"
             >
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                  <span className="font-display font-extrabold text-sm text-dark-900">
-                    {(friend.display_name || friend.username || '?')[0].toUpperCase()}
-                  </span>
-                </div>
+                {friend.profile_photo ? (
+                  <img src={friend.profile_photo} alt="" className="w-11 h-11 rounded-full object-cover" />
+                ) : (
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                    <span className="font-display font-extrabold text-sm text-dark-900">
+                      {(friend.display_name || friend.username || '?')[0].toUpperCase()}
+                    </span>
+                  </div>
+                )}
                 <div>
                   <p className="text-white text-sm font-display font-bold uppercase">
                     {friend.display_name || friend.username}
@@ -500,6 +513,23 @@ export default function Friends() {
         </div>
       ) : null}
       </>)}
+
+      {/* Remove Friend Confirmation Modal */}
+      {confirmRemove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6 animate-fade-in" onClick={() => setConfirmRemove(null)}>
+          <div className="absolute inset-0 bg-black/80" />
+          <div className="relative bg-dark-800 border border-dark-600 rounded-2xl p-5 w-full max-w-sm animate-scale-up" onClick={e => e.stopPropagation()}>
+            <h3 className="font-display font-bold text-lg text-white uppercase mb-2">Remove Friend</h3>
+            <p className="text-gray-400 text-sm mb-5">
+              Are you sure you want to remove <span className="text-white font-semibold">{(friends.find(f => f.id === confirmRemove) || searchResults.find(u => u.id === confirmRemove))?.display_name || 'this friend'}</span>? You'll need to send a new request to add them back.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmRemove(null)} className="flex-1 btn-secondary text-sm py-2.5">Cancel</button>
+              <button onClick={confirmRemoveFriend} className="flex-1 bg-red-500 text-white font-display font-bold text-sm uppercase py-2.5 rounded-xl active:scale-95 transition-transform">Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

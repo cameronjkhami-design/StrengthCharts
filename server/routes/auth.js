@@ -43,7 +43,7 @@ router.post('/signup', async (req, res) => {
   });
 
   const user = await db.execute({
-    sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, created_at FROM users WHERE id = ?',
+    sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, created_at FROM users WHERE id = ?',
     args: [Number(result.lastInsertRowid)]
   });
   res.status(201).json({ user: user.rows[0] });
@@ -57,7 +57,7 @@ router.post('/login', async (req, res) => {
   }
 
   const result = await db.execute({
-    sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, created_at, pin_hash FROM users WHERE username = ?',
+    sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, created_at, pin_hash FROM users WHERE username = ?',
     args: [username.toLowerCase()]
   });
 
@@ -76,13 +76,15 @@ router.put('/user/:id', async (req, res) => {
   const updates = [];
   const params = [];
 
-  const { privacy_settings, theme_color, sex } = req.body;
+  const { privacy_settings, theme_color, sex, profile_photo, showcase_badges } = req.body;
   if (display_name !== undefined) { updates.push('display_name = ?'); params.push(display_name); }
   if (unit_pref !== undefined) { updates.push('unit_pref = ?'); params.push(unit_pref); }
   if (is_premium !== undefined) { updates.push('is_premium = ?'); params.push(is_premium ? 1 : 0); }
   if (privacy_settings !== undefined) { updates.push('privacy_settings = ?'); params.push(JSON.stringify(privacy_settings)); }
   if (theme_color !== undefined) { updates.push('theme_color = ?'); params.push(theme_color); }
   if (sex !== undefined) { updates.push('sex = ?'); params.push(sex); }
+  if (profile_photo !== undefined) { updates.push('profile_photo = ?'); params.push(profile_photo); }
+  if (showcase_badges !== undefined) { updates.push('showcase_badges = ?'); params.push(JSON.stringify(showcase_badges)); }
 
   if (updates.length === 0) return res.status(400).json({ error: 'Nothing to update' });
 
@@ -93,7 +95,7 @@ router.put('/user/:id', async (req, res) => {
   });
 
   const result = await db.execute({
-    sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, created_at FROM users WHERE id = ?',
+    sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, created_at FROM users WHERE id = ?',
     args: [parseInt(req.params.id)]
   });
   res.json({ user: result.rows[0] });
@@ -110,7 +112,7 @@ router.put('/user/:id/premium', async (req, res) => {
   });
 
   const result = await db.execute({
-    sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, created_at FROM users WHERE id = ?',
+    sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, created_at FROM users WHERE id = ?',
     args: [parseInt(req.params.id)]
   });
 
