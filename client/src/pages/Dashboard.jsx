@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { usePremium, PREMIUM_FEATURES } from '../context/PremiumContext';
 import { api } from '../utils/api';
-import { getTier, calcE1RM, getPercentile, MAIN_LIFTS, TIER_ORDER, TIER_COLORS } from '../utils/benchmarks';
+import { getTier, calcE1RM, getPercentile, MAIN_LIFTS } from '../utils/benchmarks';
 import { formatWeight, kgToDisplay, formatDateShort } from '../utils/conversions';
 import TierBadge from '../components/TierBadge';
 import ProgressBar from '../components/ProgressBar';
@@ -20,7 +20,6 @@ export default function Dashboard() {
   const [allLogs, setAllLogs] = useState([]);
   const [bodyweight, setBodyweight] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showLegend, setShowLegend] = useState(false);
 
   // Workout tracker (localStorage)
   const [workoutDays, setWorkoutDays] = useState(() => {
@@ -179,10 +178,26 @@ export default function Dashboard() {
         );
       })()}
 
-      {/* Quick Log Button */}
-      <Link to="/log" className="btn-primary w-full block text-center mb-6">
+      {/* Quick Actions */}
+      <Link to="/log" className="btn-primary w-full block text-center mb-3">
         + Log New Lift
       </Link>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <Link to="/plate-calculator" className="btn-secondary block text-center flex items-center justify-center gap-2">
+          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="8" y1="12" x2="16" y2="12" />
+            <line x1="12" y1="8" x2="12" y2="16" />
+          </svg>
+          Plate Calc
+        </Link>
+        <Link to="/challenges" className="btn-secondary block text-center flex items-center justify-center gap-2">
+          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.5 2L6 14h8L13.5 22 22 10h-8z" />
+          </svg>
+          Challenges
+        </Link>
+      </div>
 
       {/* No data state */}
       {liftCards.length === 0 && (
@@ -204,48 +219,6 @@ export default function Dashboard() {
           </div>
         </PremiumGate>
       )}
-
-      {/* Benchmark Legend */}
-      <div className="card mb-4">
-        <button
-          onClick={() => setShowLegend(!showLegend)}
-          className="w-full flex justify-between items-center"
-        >
-          <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
-            Strength Rankings Legend
-          </h3>
-          <svg
-            viewBox="0 0 24 24"
-            className={`w-4 h-4 text-gray-500 transition-transform ${showLegend ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
-        {showLegend && (
-          <div className="mt-3 space-y-2">
-            {TIER_ORDER.map((tier, idx) => {
-              const color = TIER_COLORS[tier];
-              const pctRanges = ['0-20%', '20-40%', '40-65%', '65-85%', '85-97%', '97-100%'];
-              return (
-                <div key={tier} className="flex items-center gap-3">
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: color }}
-                  />
-                  <span className="text-white text-sm font-display font-semibold uppercase flex-1">{tier}</span>
-                  <span className="text-gray-500 text-xs font-display">Top {100 - parseInt(pctRanges[idx])}%</span>
-                </div>
-              );
-            })}
-            <p className="text-gray-600 text-[10px] mt-2 text-center">
-              Rankings based on bodyweight-relative strength (e1RM ÷ BW)
-            </p>
-          </div>
-        )}
-      </div>
 
       {/* Lift Summary Cards */}
       <div className="space-y-3">

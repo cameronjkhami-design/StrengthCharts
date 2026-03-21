@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { api } from '../utils/api';
 import { getPrimaryColor, THEME_COLORS, applyThemeColor } from '../utils/colors';
 
 export default function Settings() {
   const { user, updateUser } = useAuth();
+  const { addNotification } = useNotification();
   const navigate = useNavigate();
+
+  // Display name
+  const [displayName, setDisplayName] = useState(user?.display_name || '');
+  const [savingName, setSavingName] = useState(false);
 
   // Privacy settings
   const [privacySettings, setPrivacySettings] = useState(() => {
@@ -50,6 +56,40 @@ export default function Settings() {
       </button>
 
       <h1 className="font-display font-extrabold text-3xl text-white mb-5">Settings</h1>
+
+      {/* Display Name */}
+      <div className="card mb-3">
+        <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-1">Display Name</h3>
+        <p className="text-gray-500 text-[10px] mb-3">How your name appears to friends</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="input-field flex-1"
+            placeholder="Enter display name"
+          />
+          <button
+            onClick={async () => {
+              if (!displayName.trim()) return;
+              setSavingName(true);
+              try {
+                const data = await api.updateUser(user.id, { display_name: displayName.trim() });
+                updateUser(data.user);
+                addNotification('Display name updated!', 'success');
+              } catch (err) {
+                console.error(err);
+              } finally {
+                setSavingName(false);
+              }
+            }}
+            className="btn-secondary text-sm px-4"
+            disabled={savingName}
+          >
+            {savingName ? '...' : 'Save'}
+          </button>
+        </div>
+      </div>
 
       {/* Sex Selection */}
       <div className="card mb-3">

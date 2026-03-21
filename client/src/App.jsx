@@ -13,6 +13,8 @@ import Overview from './pages/Overview';
 import Friends from './pages/Friends';
 import FriendProfile from './pages/FriendProfile';
 import Settings from './pages/Settings';
+import PlateCalculator from './pages/PlateCalculator';
+import Challenges from './pages/Challenges';
 
 function PageWrapper({ children }) {
   const location = useLocation();
@@ -41,6 +43,8 @@ function ProtectedLayout() {
             <Route path="/friends/:friendId" element={<PageWrapper><FriendProfile /></PageWrapper>} />
             <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
             <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
+            <Route path="/plate-calculator" element={<PageWrapper><PlateCalculator /></PageWrapper>} />
+            <Route path="/challenges" element={<PageWrapper><Challenges /></PageWrapper>} />
           </Routes>
         </div>
         <BottomNav />
