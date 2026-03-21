@@ -4,7 +4,7 @@ function getBaseUrl() {
   if (window.Capacitor?.isNativePlatform()) {
     // Point to your hosted backend for native builds
     // Replace this URL when you deploy your backend
-    return import.meta.env.VITE_API_URL || 'http://192.168.1.87:3001/api';
+    return import.meta.env.VITE_API_URL || 'https://strengthcharts.vercel.app/api';
   }
   // Web: relative path works with Vite proxy (dev) and same-origin (prod)
   return import.meta.env.VITE_API_URL || '/api';
