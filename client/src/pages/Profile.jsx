@@ -297,9 +297,9 @@ export default function Profile() {
   return (
     <div className="px-4 pt-6 pb-4 overflow-x-hidden">
       {/* Profile Header Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dark-800 via-dark-800 to-dark-700 border border-dark-600 p-5 mb-5">
-        <div className="absolute -top-12 -right-12 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dark-800 via-dark-800 to-dark-700 border border-dark-600 p-5 mb-5" style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}>
+        <div className="absolute -top-12 -right-12 w-40 h-40 bg-primary/10 rounded-full blur-3xl" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', WebkitTransform: 'translate3d(0,0,0)', transform: 'translate3d(0,0,0)' }} />
+        <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', WebkitTransform: 'translate3d(0,0,0)', transform: 'translate3d(0,0,0)' }} />
 
         <div className="relative">
           <div className="flex items-center justify-between mb-4">
@@ -479,21 +479,6 @@ export default function Profile() {
         </div>
       )}
 
-      {/* Edit Name */}
-      <div className="card mb-3">
-        <label className="text-gray-400 text-xs uppercase tracking-wider mb-1 block">Display Name</label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="input-field flex-1"
-          />
-          <button onClick={handleSaveName} className="btn-secondary text-sm px-4" disabled={saving}>
-            Save
-          </button>
-        </div>
-      </div>
 
       {/* Log Bodyweight */}
       <div className="card mb-3">
@@ -656,8 +641,8 @@ export default function Profile() {
 
       {/* Pro Upgrade Card */}
       {!isPremium && isNative && (
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-4 mb-3">
-          <div className="absolute -right-6 -top-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-4 mb-3" style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}>
+          <div className="absolute -right-6 -top-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', WebkitTransform: 'translate3d(0,0,0)', transform: 'translate3d(0,0,0)' }} />
           <div className="relative flex justify-between items-center">
             <div>
               <p className="font-display font-bold text-white uppercase">Go Pro</p>
@@ -765,7 +750,7 @@ export default function Profile() {
           </div>
         </div>
       )}
-      <canvas ref={canvasRef} className="hidden" />
+      <canvas ref={canvasRef} style={{ display: 'none', width: 0, height: 0 }} />
     </div>
   );
 }

@@ -135,9 +135,9 @@ export default function FriendProfile() {
       </button>
 
       {/* Profile Header Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dark-800 via-dark-800 to-dark-700 border border-dark-600 p-5 mb-5">
-        <div className="absolute -top-12 -right-12 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dark-800 via-dark-800 to-dark-700 border border-dark-600 p-5 mb-5" style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}>
+        <div className="absolute -top-12 -right-12 w-40 h-40 bg-primary/10 rounded-full blur-3xl" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', WebkitTransform: 'translate3d(0,0,0)', transform: 'translate3d(0,0,0)' }} />
+        <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', WebkitTransform: 'translate3d(0,0,0)', transform: 'translate3d(0,0,0)' }} />
 
         <div className="relative">
           <div className="flex items-center gap-3 mb-4">
