@@ -110,6 +110,13 @@ export default function MyLifts() {
 
   const rangeOrder = ['1RM', '2-3RM', '4-5RM', '6-8RM', '9+RM'];
 
+  // Find the PR log (highest e1rm) for the selected exercise
+  const prLogId = logs.reduce((best, log) => {
+    const e1rm = calcE1RM(log.weight_kg, log.reps);
+    if (!best || e1rm > best.e1rm) return { id: log.id, e1rm };
+    return best;
+  }, null)?.id;
+
   // Delete a single lift
   const handleDeleteLift = (log) => {
     setDeleteTarget({
@@ -290,9 +297,14 @@ export default function MyLifts() {
                   {logs.map(log => (
                     <div key={log.id} className="flex justify-between items-center py-2 border-b border-dark-600 last:border-0 group">
                       <div className="min-w-0 flex-1">
-                        <p className="text-white text-sm font-semibold">
+                        <p className="text-white text-sm font-semibold flex items-center gap-1.5">
                           {formatWeight(log.weight_kg, unit)} x {log.reps}
-                          {log.rpe && <span className="text-gray-500 text-xs ml-2">RPE {log.rpe}</span>}
+                          {log.rpe && <span className="text-gray-500 text-xs">RPE {log.rpe}</span>}
+                          {log.id === prLogId && (
+                            <span className="text-[9px] font-display font-bold uppercase px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                              PR
+                            </span>
+                          )}
                         </p>
                         {log.notes && <p className="text-gray-500 text-xs truncate">{log.notes}</p>}
                       </div>

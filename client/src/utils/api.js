@@ -4,7 +4,7 @@ function getBaseUrl() {
   if (window.Capacitor?.isNativePlatform()) {
     // Point to your hosted backend for native builds
     // Replace this URL when you deploy your backend
-    return import.meta.env.VITE_API_URL || 'https://strengthcharts.vercel.app/api';
+    return import.meta.env.VITE_API_URL || 'https://strength-charts.vercel.app/api';
   }
   // Web: relative path works with Vite proxy (dev) and same-origin (prod)
   return import.meta.env.VITE_API_URL || '/api';
@@ -32,6 +32,7 @@ export const api = {
   resetPin: (email, code, new_pin) => request('/auth/reset-pin', { method: 'POST', body: JSON.stringify({ email, code, new_pin }) }),
   updateUser: (id, data) => request(`/auth/user/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updatePremiumStatus: (id, is_premium) => request(`/auth/user/${id}/premium`, { method: 'PUT', body: JSON.stringify({ is_premium }) }),
+  deleteAccount: (id, pin) => request(`/auth/user/${id}`, { method: 'DELETE', body: JSON.stringify({ pin }) }),
 
   // Lifts
   getLifts: (userId) => request(`/lifts/${userId}`),

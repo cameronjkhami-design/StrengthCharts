@@ -22,6 +22,29 @@ export default function Overview() {
 
   const hasPro = hasAccess(PREMIUM_FEATURES.OVERLAY_CHARTS);
 
+  // Strength Profile lift selection (up to 3)
+  const [selectedProfileLifts, setSelectedProfileLifts] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('sc_profile_lifts'));
+      if (Array.isArray(saved) && saved.length > 0) return saved.slice(0, 3);
+    } catch {}
+    return [];
+  });
+  const toggleProfileLift = (fullName) => {
+    setSelectedProfileLifts(prev => {
+      let next;
+      if (prev.includes(fullName)) {
+        next = prev.filter(n => n !== fullName);
+      } else if (prev.length >= 3) {
+        next = [...prev.slice(1), fullName];
+      } else {
+        next = [...prev, fullName];
+      }
+      localStorage.setItem('sc_profile_lifts', JSON.stringify(next));
+      return next;
+    });
+  };
+
   useEffect(() => {
     if (!hasPro) { setLoading(false); return; }
     Promise.all([
@@ -112,9 +135,8 @@ export default function Overview() {
   const recentLogs = allLogs.slice(0, 5);
 
   // Strength radar data (bar chart representation)
-  const strengthBars = exerciseData
+  const allStrengthBars = exerciseData
     .filter(e => TIER_THRESHOLDS[e.name])
-    .slice(0, 6)
     .map(e => ({
       name: e.name.length > 10 ? e.name.slice(0, 10) + '…' : e.name,
       fullName: e.name,
@@ -147,31 +169,58 @@ export default function Overview() {
       </div>
 
       {/* Strength Profile (Bar Chart) */}
-      {strengthBars.length > 0 && (
-        <div className="card mb-4">
-          <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-3">
-            Strength Profile
-          </h3>
-          <div className="w-full h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={strengthBars} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-                <XAxis dataKey="name" tick={{ fill: '#d1d5db', fontSize: 10, fontWeight: 700 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} interval={0} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3a3a3a', borderRadius: 8, fontSize: 12 }}
-                  formatter={(value, name, props) => [`${value}th percentile`, props.payload.fullName]}
-                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} activeBar={{ stroke: '#fff', strokeWidth: 2 }}>
-                  {strengthBars.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      {allStrengthBars.length > 0 && (() => {
+        const validSelected = selectedProfileLifts.filter(n => allStrengthBars.some(b => b.fullName === n));
+        const strengthBars = validSelected.length > 0
+          ? allStrengthBars.filter(b => validSelected.includes(b.fullName))
+          : allStrengthBars.slice(0, 3);
+        return (
+          <div className="card mb-4">
+            <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-3">
+              Strength Profile
+            </h3>
+            {/* Lift selector pills */}
+            <div className="flex gap-1.5 flex-wrap mb-2">
+              {allStrengthBars.map(b => {
+                const isSelected = (validSelected.length > 0 ? validSelected : allStrengthBars.slice(0, 3).map(x => x.fullName)).includes(b.fullName);
+                return (
+                  <button
+                    key={b.fullName}
+                    onClick={() => toggleProfileLift(b.fullName)}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-display font-bold uppercase transition-all ${
+                      isSelected
+                        ? 'bg-transparent scale-105'
+                        : 'bg-dark-700 text-gray-400 border border-dark-500'
+                    }`}
+                    style={isSelected ? { color: b.color, borderWidth: '1.5px', borderStyle: 'solid', borderColor: b.color } : undefined}
+                  >
+                    {b.fullName}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-gray-600 text-[10px] mb-2">Tap to select up to 3 exercises</p>
+            <div className="w-full h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={strengthBars} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                  <XAxis dataKey="name" tick={{ fill: '#ffffff', fontSize: 10, fontWeight: 700 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} interval={0} />
+                  <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3a3a3a', borderRadius: 8, fontSize: 12 }}
+                    formatter={(value, name, props) => [`${value}th percentile`, props.payload.fullName]}
+                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} activeBar={{ stroke: '#fff', strokeWidth: 2 }}>
+                    {strengthBars.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Weekly Volume Trend */}
       {volumeData.length >= 2 && (

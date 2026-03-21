@@ -316,26 +316,42 @@ function OverlayChart({ logs, unit }) {
 
   const displayedLifts = selectedLifts.length > 0 ? selectedLifts : availableExercises.slice(0, 3);
 
-  // Group logs by month and exercise, compute best e1rm per period
-  const byMonth = {};
-  for (const log of logs) {
-    if (!displayedLifts.includes(log.exercise_name)) continue;
-    const d = new Date(log.logged_at);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    if (!byMonth[key]) byMonth[key] = {};
-    const e1rm = calcE1RM(log.weight_kg, log.reps);
-    const displayed = kgToDisplay(e1rm, unit);
-    if (!byMonth[key][log.exercise_name] || displayed > byMonth[key][log.exercise_name]) {
-      byMonth[key][log.exercise_name] = displayed;
+  // Group logs by time period and exercise, compute best e1rm per period
+  // First try monthly grouping; if < 2 data points, fall back to weekly
+  const groupLogs = (periodFn, labelFn) => {
+    const byPeriod = {};
+    for (const log of logs) {
+      if (!displayedLifts.includes(log.exercise_name)) continue;
+      const d = new Date(log.logged_at);
+      const key = periodFn(d);
+      if (!byPeriod[key]) byPeriod[key] = {};
+      const e1rm = calcE1RM(log.weight_kg, log.reps);
+      const displayed = kgToDisplay(e1rm, unit);
+      if (!byPeriod[key][log.exercise_name] || displayed > byPeriod[key][log.exercise_name]) {
+        byPeriod[key][log.exercise_name] = displayed;
+      }
     }
+    return Object.keys(byPeriod).sort().map(key => ({
+      month: labelFn(key),
+      ...byPeriod[key],
+    }));
+  };
+
+  const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const monthLabel = (k) => k.slice(5) + '/' + k.slice(2, 4);
+  const weekKey = (d) => {
+    const start = new Date(d);
+    start.setDate(d.getDate() - d.getDay());
+    return start.toISOString().split('T')[0];
+  };
+  const weekLabel = (k) => k.slice(5); // MM-DD
+
+  let data = groupLogs(monthKey, monthLabel);
+  if (data.length < 2) {
+    data = groupLogs(weekKey, weekLabel);
   }
 
-  const data = Object.keys(byMonth).sort().map(month => ({
-    month: month.slice(5) + '/' + month.slice(2, 4),
-    ...byMonth[month],
-  }));
-
-  if (data.length < 2) return <p className="text-gray-500 text-xs text-center py-4">Need more data for comparison</p>;
+  if (data.length < 1) return <p className="text-gray-500 text-xs text-center py-4">Need more data for comparison</p>;
 
   return (
     <div>

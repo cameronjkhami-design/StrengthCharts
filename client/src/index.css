@@ -4,6 +4,27 @@
 
 :root {
   --color-primary: #FFD700;
+  --dark-900: #0a0a0a;
+  --dark-800: #141414;
+  --dark-700: #1e1e1e;
+  --dark-600: #2a2a2a;
+  --dark-500: #3a3a3a;
+  --bg-body: #0a0a0a;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+}
+
+[data-theme="light"] {
+  --dark-900: #ffffff;
+  --dark-800: #f3f4f6;
+  --dark-700: #e5e7eb;
+  --dark-600: #d1d5db;
+  --dark-500: #9ca3af;
+  --bg-body: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
 }
 
 @layer base {
@@ -20,13 +41,15 @@
   }
 
   html, body {
-    background-color: #0a0a0a;
+    background-color: var(--bg-body);
     overscroll-behavior: none;
     overflow: hidden;
     position: fixed;
     width: 100%;
     height: 100%;
     -webkit-font-smoothing: antialiased;
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   input[type="number"]::-webkit-inner-spin-button,
@@ -37,6 +60,63 @@
 
   input[type="number"] {
     -moz-appearance: textfield;
+  }
+
+  /* Light mode text overrides */
+  [data-theme="light"] .text-white {
+    color: #111827;
+  }
+  [data-theme="light"] .text-gray-400 {
+    color: #4b5563;
+  }
+  [data-theme="light"] .text-gray-500 {
+    color: #6b7280;
+  }
+  [data-theme="light"] .text-gray-600 {
+    color: #9ca3af;
+  }
+  [data-theme="light"] .bg-black {
+    background-color: #f3f4f6;
+  }
+  [data-theme="light"] .bg-black\/70 {
+    background-color: rgba(0,0,0,0.3);
+  }
+  [data-theme="light"] .bg-black\/85 {
+    background-color: rgba(0,0,0,0.4);
+  }
+  [data-theme="light"] .border-dark-600 {
+    border-color: var(--dark-600);
+  }
+  [data-theme="light"] .text-dark-900 {
+    color: #ffffff;
+  }
+  [data-theme="light"] input,
+  [data-theme="light"] textarea,
+  [data-theme="light"] select {
+    color-scheme: light;
+    color: #111827;
+  }
+  [data-theme="light"] input::placeholder,
+  [data-theme="light"] textarea::placeholder {
+    color: #9ca3af;
+  }
+  [data-theme="light"] select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  }
+  [data-theme="light"] input[type="date"] {
+    color-scheme: light;
+  }
+
+  /* White dropdown arrows for select elements */
+  select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
   }
 
   /* Fix date input alignment and sizing on mobile */

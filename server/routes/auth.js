@@ -231,4 +231,32 @@ router.post('/reset-pin', async (req, res) => {
   res.json({ message: 'PIN reset successfully. You can now log in.' });
 });
 
+// DELETE /api/auth/user/:id — delete account and all associated data
+router.delete('/user/:id', async (req, res) => {
+  const userId = parseInt(req.params.id);
+  const { pin } = req.body;
+  if (!pin) return res.status(400).json({ error: 'PIN required to delete account' });
+
+  // Verify PIN
+  const userResult = await db.execute({
+    sql: 'SELECT pin_hash FROM users WHERE id = ?',
+    args: [userId]
+  });
+  if (userResult.rows.length === 0) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  if (userResult.rows[0].pin_hash !== hashPin(pin)) {
+    return res.status(401).json({ error: 'Incorrect PIN' });
+  }
+
+  // Delete all user data
+  await db.execute({ sql: 'DELETE FROM lift_logs WHERE user_id = ?', args: [userId] });
+  await db.execute({ sql: 'DELETE FROM bodyweight_logs WHERE user_id = ?', args: [userId] });
+  await db.execute({ sql: 'DELETE FROM friendships WHERE user_id = ? OR friend_id = ?', args: [userId, userId] });
+  await db.execute({ sql: 'DELETE FROM password_reset_tokens WHERE user_id = ?', args: [userId] });
+  await db.execute({ sql: 'DELETE FROM users WHERE id = ?', args: [userId] });
+
+  res.json({ message: 'Account deleted successfully' });
+});
+
 module.exports = router;

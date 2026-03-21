@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { applyThemeColor } from '../utils/colors';
+import { applyThemeColor, applyThemeMode, getThemeMode } from '../utils/colors';
 
 const AuthContext = createContext(null);
 
@@ -9,8 +9,10 @@ export function AuthProvider({ children }) {
     if (saved) {
       const parsed = JSON.parse(saved);
       applyThemeColor(parsed.theme_color);
+      applyThemeMode(getThemeMode());
       return parsed;
     }
+    applyThemeMode(getThemeMode());
     return null;
   });
 

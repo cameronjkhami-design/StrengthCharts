@@ -36,9 +36,13 @@ export function PremiumProvider({ children }) {
   }, [unlockedFeatures]);
 
   const hasAccess = useCallback((featureId) => {
-    // All pro features are currently unlocked for everyone
-    return true;
-  }, []);
+    // Premium users have full access
+    if (isPremium) return true;
+    // Check if feature was temporarily unlocked (via rewarded ad)
+    const expiry = unlockedFeatures[featureId];
+    if (expiry && Date.now() < expiry) return true;
+    return false;
+  }, [isPremium, unlockedFeatures]);
 
   const unlockFeatureTemporarily = useCallback((featureId, durationMs = 24 * 60 * 60 * 1000) => {
     setUnlockedFeatures(prev => ({

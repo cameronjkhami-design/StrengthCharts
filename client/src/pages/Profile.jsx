@@ -145,6 +145,7 @@ export default function Profile() {
 
   // Sections toggle
   const [showBWHistory, setShowBWHistory] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -403,7 +404,7 @@ export default function Profile() {
                 <div className="grid grid-cols-3 gap-2">
                   {showcasedBadges.map(a => {
                     const iconPath = BADGE_ICONS[a.category];
-                    const isStroke = a.category === 'strength' || a.category === 'social' || a.category === 'consistency';
+                    const isStroke = a.category === 'strength' || a.category === 'social' || a.category === 'consistency' || a.category === 'clubs';
                     const rarity = RARITY_COLORS[a.rarity] || RARITY_COLORS.common;
                     return (
                       <div
@@ -545,22 +546,37 @@ export default function Profile() {
 
       {/* Achievements */}
       <div className="card mb-3">
-        <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => setShowAchievements(!showAchievements)}
+          className="w-full flex items-center justify-between"
+        >
           <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
             Achievements
             <ProTag />
           </h3>
-          <span className="text-primary text-xs font-display font-bold">
-            {earnedAchievements.length}/{ACHIEVEMENTS.length}
-          </span>
-        </div>
+          <div className="flex items-center gap-2">
+            <span className="text-primary text-xs font-display font-bold">
+              {earnedAchievements.length}/{ACHIEVEMENTS.length}
+            </span>
+            <svg
+              viewBox="0 0 24 24"
+              className={`w-4 h-4 text-gray-500 transition-transform ${showAchievements ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        </button>
 
-        <div className="grid grid-cols-4 gap-2 mb-4">
+        {showAchievements && <>
+        <div className="grid grid-cols-4 gap-2 mb-4 mt-4">
           {ACHIEVEMENTS.map(achievement => {
             const earned = earnedAchievements.some(a => a.id === achievement.id);
             const isShowcased = showcaseIds.includes(achievement.id);
             const iconPath = BADGE_ICONS[achievement.category];
-            const isStroke = achievement.category === 'strength' || achievement.category === 'social' || achievement.category === 'consistency';
+            const isStroke = achievement.category === 'strength' || achievement.category === 'social' || achievement.category === 'consistency' || achievement.category === 'clubs';
             const resolvedRarity = resolveRarity(achievement, currentStats);
             const rarity = RARITY_COLORS[resolvedRarity] || RARITY_COLORS.common;
             return (
@@ -613,7 +629,7 @@ export default function Profile() {
         {earnedAchievements.length > 0 && (
           <div className="space-y-1.5">
             {earnedAchievements.map(a => {
-              const isStroke = a.category === 'strength' || a.category === 'social' || a.category === 'consistency';
+              const isStroke = a.category === 'strength' || a.category === 'social' || a.category === 'consistency' || a.category === 'clubs';
               const rarity = RARITY_COLORS[a.rarity] || RARITY_COLORS.common;
               return (
                 <div key={a.id} className="flex items-center gap-3 py-2 px-3 rounded-xl" style={{ backgroundColor: rarity.glow }}>
@@ -637,6 +653,7 @@ export default function Profile() {
             })}
           </div>
         )}
+        </>}
       </div>
 
       {/* Pro Upgrade Card */}

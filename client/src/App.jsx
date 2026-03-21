@@ -1,7 +1,31 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PremiumProvider } from './context/PremiumContext';
 import { NotificationProvider } from './context/NotificationContext';
+
+// Global light haptic on every button/link tap
+function triggerLightHaptic() {
+  if (localStorage.getItem('sc_haptics') === 'false') return;
+  if (window.Capacitor?.isNativePlatform()) {
+    import('@capacitor/haptics').then(({ Haptics, ImpactStyle }) => {
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+    }).catch(() => {});
+  } else if (navigator.vibrate) {
+    navigator.vibrate(10);
+  }
+}
+
+function useGlobalHaptics() {
+  useEffect(() => {
+    const handler = (e) => {
+      const el = e.target.closest('button, a, [role="button"]');
+      if (el) triggerLightHaptic();
+    };
+    document.addEventListener('pointerdown', handler, { passive: true });
+    return () => document.removeEventListener('pointerdown', handler);
+  }, []);
+}
 import BottomNav from './components/BottomNav';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -54,6 +78,7 @@ function ProtectedLayout() {
 }
 
 export default function App() {
+  useGlobalHaptics();
   return (
     <AuthProvider>
       <PremiumProvider>

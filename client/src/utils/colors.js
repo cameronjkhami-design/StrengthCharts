@@ -24,3 +24,16 @@ export const THEME_COLORS = [
 export function applyThemeColor(color) {
   document.documentElement.style.setProperty('--color-primary', color || '#FFD700');
 }
+
+// Light/dark mode
+export function applyThemeMode(mode) {
+  if (mode === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+
+export function getThemeMode() {
+  return localStorage.getItem('sc_theme_mode') || 'dark';
+}

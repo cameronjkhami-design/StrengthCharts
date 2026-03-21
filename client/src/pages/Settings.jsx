@@ -3,16 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { api } from '../utils/api';
-import { getPrimaryColor, THEME_COLORS, applyThemeColor } from '../utils/colors';
+import { getPrimaryColor, THEME_COLORS, applyThemeColor, applyThemeMode } from '../utils/colors';
 
 export default function Settings() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
 
   // Display name
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [savingName, setSavingName] = useState(false);
+
+  // Delete account
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePin, setDeletePin] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   // Privacy settings
   const [privacySettings, setPrivacySettings] = useState(() => {
@@ -28,6 +33,18 @@ export default function Settings() {
     const saved = localStorage.getItem('sc_haptics');
     return saved !== 'false'; // default on
   });
+
+  // Theme mode (light/dark)
+  const [themeMode, setThemeMode] = useState(() => {
+    return localStorage.getItem('sc_theme_mode') || 'dark';
+  });
+
+  const handleToggleThemeMode = () => {
+    const next = themeMode === 'dark' ? 'light' : 'dark';
+    setThemeMode(next);
+    localStorage.setItem('sc_theme_mode', next);
+    applyThemeMode(next);
+  };
 
   const handleTogglePrivacy = async (key) => {
     const updated = { ...privacySettings, [key]: privacySettings[key] === false ? true : false };
@@ -177,6 +194,34 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Appearance Mode */}
+      <div className="card mb-3">
+        <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-3">Appearance</h3>
+        <div className="flex gap-2">
+          {[
+            { value: 'dark', label: 'Dark', icon: '🌙' },
+            { value: 'light', label: 'Light', icon: '☀️' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                setThemeMode(opt.value);
+                localStorage.setItem('sc_theme_mode', opt.value);
+                applyThemeMode(opt.value);
+              }}
+              className={`flex-1 py-3 rounded-xl font-display font-bold text-sm uppercase transition-all flex items-center justify-center gap-2 ${
+                themeMode === opt.value
+                  ? 'bg-primary text-dark-900 border-2 border-primary'
+                  : 'bg-dark-700 text-gray-400 border border-dark-500'
+              }`}
+            >
+              <span className="text-lg">{opt.icon}</span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Haptics Toggle */}
       <div className="card mb-3">
         <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-3">Haptics</h3>
@@ -233,6 +278,66 @@ export default function Settings() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Delete Account */}
+      <div className="card mb-3 border-red-900/50">
+        <h3 className="font-display font-bold text-sm uppercase text-red-400 mb-2">Danger Zone</h3>
+        {!showDeleteConfirm ? (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full py-3 rounded-xl bg-red-900/20 border border-red-800 text-red-400 font-display font-bold text-sm uppercase active:scale-95 transition-transform"
+          >
+            Delete Account
+          </button>
+        ) : (
+          <div>
+            <p className="text-gray-400 text-xs mb-3">
+              This will permanently delete your account and all data (lifts, bodyweight, friends). Enter your PIN to confirm.
+            </p>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Enter PIN"
+                value={deletePin}
+                onChange={(e) => setDeletePin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="input-field flex-1"
+              />
+              <button
+                onClick={async () => {
+                  if (deletePin.length !== 6) {
+                    addNotification('Enter your 6-digit PIN', 'error');
+                    return;
+                  }
+                  setDeleting(true);
+                  try {
+                    await api.deleteAccount(user.id, deletePin);
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    logout();
+                    navigate('/login');
+                  } catch (err) {
+                    addNotification(err.message || 'Failed to delete account', 'error');
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+                className="px-4 py-3 rounded-xl bg-red-600 text-white font-display font-bold text-sm uppercase active:scale-95 transition-transform"
+              >
+                {deleting ? '...' : 'Confirm'}
+              </button>
+            </div>
+            <button
+              onClick={() => { setShowDeleteConfirm(false); setDeletePin(''); }}
+              className="w-full text-center text-gray-500 text-xs py-2"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
