@@ -4,6 +4,7 @@ import { api } from '../utils/api';
 import { inputToKg, kgToDisplay } from '../utils/conversions';
 import { DEFAULT_EXERCISES } from '../utils/benchmarks';
 import { useNotification } from '../context/NotificationContext';
+import WorkoutSummary from '../components/WorkoutSummary';
 
 function triggerHeavyHaptic() {
   if (window.Capacitor?.isNativePlatform()) {
@@ -33,6 +34,15 @@ export default function LogPR() {
 
   const [lastWeight, setLastWeight] = useState(null);
   const [suggestion, setSuggestion] = useState(null);
+
+  // Session tracking for workout summary
+  const [sessionLogs, setSessionLogs] = useState(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('sc_session_logs'));
+      return Array.isArray(saved) ? saved : [];
+    } catch { return []; }
+  });
+  const [showSummary, setShowSummary] = useState(false);
 
   const selectedExercise = exercise === '__custom__' ? customExercise : exercise;
 
@@ -93,6 +103,18 @@ export default function LogPR() {
       setSuccess(true);
       triggerHeavyHaptic();
       addNotification(`${selectedExercise} logged!`, 'success');
+
+      // Track in session for workout summary
+      const newLog = {
+        exercise_name: selectedExercise,
+        weight_kg: inputToKg(parseFloat(weight), unit),
+        reps: parseInt(reps),
+        rpe: rpe ? parseFloat(rpe) : null,
+        logged_at: new Date(date).toISOString(),
+      };
+      const updatedSession = [...sessionLogs, newLog];
+      setSessionLogs(updatedSession);
+      sessionStorage.setItem('sc_session_logs', JSON.stringify(updatedSession));
 
       // Progressive overload encouragement
       const loggedWeight = parseFloat(weight);
@@ -274,6 +296,53 @@ export default function LogPR() {
           {loading ? 'Saving...' : 'Log Lift'}
         </button>
       </form>
+
+      {/* Session tracker + Finish Workout */}
+      {sessionLogs.length > 0 && (
+        <div className="mt-6">
+          <div className="card mb-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-display font-bold text-sm uppercase text-gray-400">Current Session</h3>
+              <span className="text-primary text-xs font-display font-bold">{sessionLogs.length} sets</span>
+            </div>
+            <div className="space-y-1 max-h-32 overflow-y-auto mb-3">
+              {sessionLogs.map((log, i) => (
+                <div key={i} className="flex justify-between items-center py-1 px-2 bg-dark-700 rounded-lg">
+                  <span className="text-gray-400 text-[10px] truncate flex-1">{log.exercise_name}</span>
+                  <span className="text-white text-xs font-display font-semibold ml-2">
+                    {kgToDisplay(log.weight_kg, unit)} x {log.reps}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowSummary(true)}
+              className="w-full py-3 rounded-xl bg-[#FFD700] text-black font-display font-bold text-sm uppercase active:scale-95 transition-transform"
+            >
+              Finish Workout
+            </button>
+          </div>
+        </div>
+      )}
+
+      <WorkoutSummary
+        isOpen={showSummary}
+        onClose={() => {
+          setShowSummary(false);
+          setSessionLogs([]);
+          sessionStorage.removeItem('sc_session_logs');
+          // Also mark today as a workout day
+          const todayStr = new Date().toISOString().split('T')[0];
+          try {
+            const days = JSON.parse(localStorage.getItem('sc_workout_days')) || [];
+            if (!days.includes(todayStr)) {
+              const updated = [...days, todayStr];
+              localStorage.setItem('sc_workout_days', JSON.stringify(updated));
+            }
+          } catch {}
+        }}
+        sessionLogs={sessionLogs}
+      />
     </div>
   );
 }
