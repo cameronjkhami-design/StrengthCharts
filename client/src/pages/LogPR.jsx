@@ -4,6 +4,7 @@ import { api } from '../utils/api';
 import { inputToKg, kgToDisplay } from '../utils/conversions';
 import { DEFAULT_EXERCISES } from '../utils/benchmarks';
 import { useNotification } from '../context/NotificationContext';
+import { getPrimaryColor } from '../utils/colors';
 import WorkoutSummary from '../components/WorkoutSummary';
 
 function triggerHeavyHaptic() {
@@ -317,7 +318,8 @@ export default function LogPR() {
             </div>
             <button
               onClick={() => setShowSummary(true)}
-              className="w-full py-3 rounded-xl bg-[#FFD700] text-black font-display font-bold text-sm uppercase active:scale-95 transition-transform"
+              className="w-full py-3 rounded-xl font-display font-bold text-sm uppercase active:scale-95 transition-transform"
+              style={{ backgroundColor: getPrimaryColor(), color: '#0a0a0a' }}
             >
               Finish Workout
             </button>

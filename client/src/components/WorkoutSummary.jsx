@@ -214,7 +214,7 @@ export default function WorkoutSummary({ isOpen, onClose, sessionLogs = [] }) {
           <p className="text-gray-500 text-xs">This is your {workoutCount}{getOrdinalSuffix(workoutCount)} workout</p>
         </div>
 
-        <div className="bg-dark-700/60 backdrop-blur-sm rounded-2xl p-6 mx-4 mb-6 border border-dark-500/50">
+        <div className="bg-dark-700/60 backdrop-blur-sm rounded-2xl p-5 border border-dark-500/50">
           <h2 className="font-display font-extrabold text-2xl text-white mb-4">
             Workout Complete
           </h2>
@@ -252,7 +252,7 @@ export default function WorkoutSummary({ isOpen, onClose, sessionLogs = [] }) {
     // Page 1: Muscle map
     () => (
       <div className="text-center">
-        <div className="bg-dark-700/60 backdrop-blur-sm rounded-2xl p-6 mx-4 mb-6 border border-dark-500/50">
+        <div className="bg-dark-700/60 backdrop-blur-sm rounded-2xl p-5 border border-dark-500/50">
           <h2 className="font-display font-extrabold text-xl text-white mb-4">
             Muscles Worked
           </h2>
@@ -275,7 +275,7 @@ export default function WorkoutSummary({ isOpen, onClose, sessionLogs = [] }) {
     // Page 2: Volume comparison
     () => (
       <div className="text-center">
-        <div className="bg-dark-700/60 backdrop-blur-sm rounded-2xl p-6 mx-4 mb-6 border border-dark-500/50">
+        <div className="bg-dark-700/60 backdrop-blur-sm rounded-2xl p-5 border border-dark-500/50">
           <p className="text-gray-400 text-sm mb-2">You lifted a total of</p>
           <p className="font-display font-extrabold text-5xl text-white mb-2">
             {displayVolume.toLocaleString()} <span className="text-2xl text-gray-400">{unit}</span>
@@ -301,7 +301,7 @@ export default function WorkoutSummary({ isOpen, onClose, sessionLogs = [] }) {
     // Page 3: Set-by-set breakdown
     () => (
       <div className="text-center">
-        <div className="bg-dark-700/60 backdrop-blur-sm rounded-2xl p-6 mx-4 mb-6 border border-dark-500/50">
+        <div className="bg-dark-700/60 backdrop-blur-sm rounded-2xl p-5 border border-dark-500/50">
           <h2 className="font-display font-extrabold text-xl text-white mb-4">
             Session Details
           </h2>
@@ -334,10 +334,10 @@ export default function WorkoutSummary({ isOpen, onClose, sessionLogs = [] }) {
   const totalPages = pages.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center animate-fade-in bg-dark-900/95">
+    <div className="fixed inset-0 z-50 flex flex-col animate-fade-in bg-dark-900/95" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Content area with swipe */}
       <div
-        className="flex-1 flex items-center justify-center w-full max-w-lg"
+        className="flex-1 flex items-center justify-center w-full px-4 overflow-hidden"
         onTouchStart={(e) => {
           e.currentTarget._touchStartX = e.touches[0].clientX;
         }}
@@ -349,24 +349,25 @@ export default function WorkoutSummary({ isOpen, onClose, sessionLogs = [] }) {
           }
         }}
       >
-        {pages[page]()}
+        <div className="w-full max-w-sm">
+          {pages[page]()}
+        </div>
       </div>
 
       {/* Page dots */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 justify-center py-4">
         {Array.from({ length: totalPages }).map((_, i) => (
           <button
             key={i}
             onClick={() => setPage(i)}
-            className={`w-2 h-2 rounded-full transition-all ${
-              i === page ? 'bg-primary w-4' : 'bg-dark-500'
-            }`}
+            className="w-2 h-2 rounded-full transition-all"
+            style={i === page ? { backgroundColor: getPrimaryColor(), width: '1rem' } : { backgroundColor: '#3a3a3a' }}
           />
         ))}
       </div>
 
       {/* Done button */}
-      <div className="w-full max-w-lg px-6 pb-8">
+      <div className="w-full px-6 pb-6">
         <button
           onClick={onClose}
           className="w-full py-4 rounded-2xl font-display font-bold text-lg uppercase transition-all active:scale-95"
