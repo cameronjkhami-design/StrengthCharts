@@ -199,7 +199,7 @@ export default function Friends() {
       {/* Leaderboard Tab */}
       {tab === 'leaderboard' && (
         !hasPro ? (
-          <PremiumGate featureId={PREMIUM_FEATURES.FRIEND_LEADERBOARD}>
+          <PremiumGate featureId={PREMIUM_FEATURES.FRIEND_LEADERBOARD} label="Friend Leaderboard">
             <div />
           </PremiumGate>
         ) : lbLoading ? (

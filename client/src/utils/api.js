@@ -30,6 +30,7 @@ export const api = {
   signup: (username, pin, display_name, email) => request('/auth/signup', { method: 'POST', body: JSON.stringify({ username, pin, display_name, email }) }),
   forgotPin: (email) => request('/auth/forgot-pin', { method: 'POST', body: JSON.stringify({ email }) }),
   resetPin: (email, code, new_pin) => request('/auth/reset-pin', { method: 'POST', body: JSON.stringify({ email, code, new_pin }) }),
+  getUser: (id) => request(`/auth/user/${id}`),
   updateUser: (id, data) => request(`/auth/user/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updatePremiumStatus: (id, is_premium) => request(`/auth/user/${id}/premium`, { method: 'PUT', body: JSON.stringify({ is_premium }) }),
   deleteAccount: (id, pin) => request(`/auth/user/${id}`, { method: 'DELETE', body: JSON.stringify({ pin }) }),

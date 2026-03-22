@@ -15,7 +15,7 @@ export function ProTag({ inverted = false }) {
   );
 }
 
-export default function PremiumGate({ featureId, children, blurContent = false }) {
+export default function PremiumGate({ featureId, children, blurContent = false, label }) {
   const { hasAccess, unlockFeatureTemporarily } = usePremium();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [adLoading, setAdLoading] = useState(false);
@@ -38,6 +38,8 @@ export default function PremiumGate({ featureId, children, blurContent = false }
     setAdLoading(false);
   };
 
+  const displayLabel = label || 'this feature';
+
   return (
     <>
       <div className="relative">
@@ -55,8 +57,8 @@ export default function PremiumGate({ featureId, children, blurContent = false }
               <svg viewBox="0 0 24 24" className="w-8 h-8 text-primary" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
               </svg>
-              <span className="text-primary font-display font-bold text-sm uppercase">Unlock with Pro</span>
-              <span className="text-gray-500 text-xs">Upgrade to access this feature</span>
+              <span className="text-primary font-display font-bold text-sm uppercase">Unlock {displayLabel}</span>
+              <span className="text-gray-500 text-xs">Upgrade to Pro for full access</span>
             </button>
 
             <button

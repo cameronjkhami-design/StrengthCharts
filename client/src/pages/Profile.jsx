@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePremium, PREMIUM_FEATURES } from '../context/PremiumContext';
-import { ProTag } from '../components/PremiumGate';
+import PremiumGate, { ProTag } from '../components/PremiumGate';
 import { useNotification } from '../context/NotificationContext';
 import { api } from '../utils/api';
 import { ACHIEVEMENTS, BADGE_ICONS, RARITY_COLORS, computeStats, getEarnedAchievements, resolveRarity } from '../utils/achievements';
@@ -16,7 +16,7 @@ import { getDailyTips } from '../utils/tips';
 
 export default function Profile() {
   const { user, updateUser, logout } = useAuth();
-  const { isPremium, isNative } = usePremium();
+  const { isPremium, hasAccess, isNative } = usePremium();
   const { restorePurchases, restoring } = usePurchases();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
@@ -145,7 +145,8 @@ export default function Profile() {
 
   // Sections toggle
   const [showBWHistory, setShowBWHistory] = useState(false);
-  const [showAchievements, setShowAchievements] = useState(true);
+  const [showBWTrend, setShowBWTrend] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -462,20 +463,28 @@ export default function Profile() {
             </svg>
           </button>
           {showTips && (
-            <div className="space-y-2 mt-3">
-              {tips.map((t, i) => (
-                <div key={i} className="flex gap-3 py-2.5 px-3 bg-dark-700 rounded-xl">
-                  <div className="w-1 rounded-full flex-shrink-0" style={{ backgroundColor: getPrimaryColor() }} />
-                  <div className="min-w-0">
-                    {t.exercise && (
-                      <p className="text-primary text-[10px] font-display font-bold uppercase mb-0.5">{t.exercise}</p>
-                    )}
-                    <p className="text-gray-300 text-xs leading-relaxed">{t.tip}</p>
+            hasAccess(PREMIUM_FEATURES.TRAINING_TIPS) ? (
+              <div className="space-y-2 mt-3">
+                {tips.map((t, i) => (
+                  <div key={i} className="flex gap-3 py-2.5 px-3 bg-dark-700 rounded-xl">
+                    <div className="w-1 rounded-full flex-shrink-0" style={{ backgroundColor: getPrimaryColor() }} />
+                    <div className="min-w-0">
+                      {t.exercise && (
+                        <p className="text-primary text-[10px] font-display font-bold uppercase mb-0.5">{t.exercise}</p>
+                      )}
+                      <p className="text-gray-300 text-xs leading-relaxed">{t.tip}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-              <p className="text-gray-600 text-[10px] text-center">Tips refresh daily based on your lifts</p>
-            </div>
+                ))}
+                <p className="text-gray-600 text-[10px] text-center">Tips refresh daily based on your lifts</p>
+              </div>
+            ) : (
+              <div className="mt-3">
+                <PremiumGate featureId={PREMIUM_FEATURES.TRAINING_TIPS} label="Training Tips">
+                  <div />
+                </PremiumGate>
+              </div>
+            )
           )}
         </div>
       )}
@@ -503,22 +512,44 @@ export default function Profile() {
       {/* BW Trendline */}
       {chartData.length > 1 && (
         <div className="card mb-3">
-          <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={() => setShowBWTrend(!showBWTrend)}
+            className="w-full flex justify-between items-center"
+          >
             <h3 className="font-display font-bold text-sm uppercase text-gray-400 flex items-center gap-2">
               Bodyweight Over Time
               <ProTag />
             </h3>
-          </div>
-          <div className="w-full h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-                <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
-                <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="weight" stroke={getPrimaryColor()} strokeWidth={2} dot={{ fill: getPrimaryColor(), r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+            <svg
+              viewBox="0 0 24 24"
+              className={`w-4 h-4 text-gray-500 transition-transform ${showBWTrend ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {showBWTrend && (
+            hasAccess(PREMIUM_FEATURES.BW_TRENDLINE) ? (
+              <div className="w-full h-48 mt-3">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                    <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={{ stroke: '#3a3a3a' }} tickLine={false} />
+                    <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line type="monotone" dataKey="weight" stroke={getPrimaryColor()} strokeWidth={2} dot={{ fill: getPrimaryColor(), r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="mt-3">
+                <PremiumGate featureId={PREMIUM_FEATURES.BW_TRENDLINE} label="Bodyweight Trendline">
+                  <div />
+                </PremiumGate>
+              </div>
+            )
+          )}
         </div>
       )}
 
@@ -570,90 +601,100 @@ export default function Profile() {
           </div>
         </button>
 
-        {showAchievements && <>
-        <div className="grid grid-cols-4 gap-2 mb-4 mt-4">
-          {ACHIEVEMENTS.map(achievement => {
-            const earned = earnedAchievements.some(a => a.id === achievement.id);
-            const isShowcased = showcaseIds.includes(achievement.id);
-            const iconPath = BADGE_ICONS[achievement.category];
-            const isStroke = achievement.category === 'strength' || achievement.category === 'social' || achievement.category === 'consistency' || achievement.category === 'clubs';
-            const resolvedRarity = resolveRarity(achievement, currentStats);
-            const rarity = RARITY_COLORS[resolvedRarity] || RARITY_COLORS.common;
-            return (
-              <div
-                key={achievement.id}
-                onClick={() => earned && toggleShowcase(achievement.id)}
-                className={`relative flex flex-col items-center p-2.5 rounded-xl transition-all ${
-                  earned ? 'cursor-pointer active:scale-95' : ''
-                } ${isShowcased ? 'shadow-lg' : earned ? 'shadow-md' : 'opacity-30'}`}
-                style={earned ? {
-                  background: `linear-gradient(to bottom, ${rarity.glow}, transparent)`,
-                  border: isShowcased ? `2px solid ${rarity.border}` : `1px solid ${rarity.border}40`,
-                  boxShadow: isShowcased ? `0 0 12px ${rarity.glow}` : undefined,
-                } : {
-                  backgroundColor: 'rgba(42,42,42,0.5)',
-                  border: '1px solid rgba(58,58,58,1)',
-                }}
-              >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center mb-1.5"
-                  style={earned ? { backgroundColor: rarity.bg + '30' } : { backgroundColor: '#2a2a2a' }}>
-                  <svg viewBox="0 0 24 24" className="w-4 h-4" style={{ color: earned ? rarity.bg : '#4b5563' }}
-                    fill={isStroke ? 'none' : 'currentColor'} stroke={isStroke ? 'currentColor' : 'none'}
-                    strokeWidth={isStroke ? 2 : 0} strokeLinecap="round" strokeLinejoin="round">
-                    <path d={iconPath} />
-                  </svg>
-                </div>
-                <span className={`text-[8px] font-display font-bold uppercase text-center leading-tight ${earned ? 'text-white' : 'text-gray-600'}`}>
-                  {achievement.name}
-                </span>
-                {earned && (
-                  <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: isShowcased ? rarity.bg : rarity.bg + 'B3' }}>
-                    {isShowcased ? (
-                      <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 text-dark-900" fill="currentColor">
-                        <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.5l-4.8 2.4.9-5.4L4.2 7.7l5.4-.8z" />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" className="w-2 h-2 text-dark-900" fill="none" stroke="currentColor" strokeWidth={4}>
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </div>
-                )}
-                {earned && <div className="w-1.5 h-1.5 rounded-full mt-1" style={{ backgroundColor: rarity.bg }} />}
+        {showAchievements && (
+          hasAccess(PREMIUM_FEATURES.ACHIEVEMENTS) ? (
+            <>
+              <div className="grid grid-cols-4 gap-2 mb-4 mt-4">
+                {ACHIEVEMENTS.map(achievement => {
+                  const earned = earnedAchievements.some(a => a.id === achievement.id);
+                  const isShowcased = showcaseIds.includes(achievement.id);
+                  const iconPath = BADGE_ICONS[achievement.category];
+                  const isStroke = achievement.category === 'strength' || achievement.category === 'social' || achievement.category === 'consistency' || achievement.category === 'clubs';
+                  const resolvedRarity = resolveRarity(achievement, currentStats);
+                  const rarity = RARITY_COLORS[resolvedRarity] || RARITY_COLORS.common;
+                  return (
+                    <div
+                      key={achievement.id}
+                      onClick={() => earned && toggleShowcase(achievement.id)}
+                      className={`relative flex flex-col items-center p-2.5 rounded-xl transition-all ${
+                        earned ? 'cursor-pointer active:scale-95' : ''
+                      } ${isShowcased ? 'shadow-lg' : earned ? 'shadow-md' : 'opacity-30'}`}
+                      style={earned ? {
+                        background: `linear-gradient(to bottom, ${rarity.glow}, transparent)`,
+                        border: isShowcased ? `2px solid ${rarity.border}` : `1px solid ${rarity.border}40`,
+                        boxShadow: isShowcased ? `0 0 12px ${rarity.glow}` : undefined,
+                      } : {
+                        backgroundColor: 'rgba(42,42,42,0.5)',
+                        border: '1px solid rgba(58,58,58,1)',
+                      }}
+                    >
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center mb-1.5"
+                        style={earned ? { backgroundColor: rarity.bg + '30' } : { backgroundColor: '#2a2a2a' }}>
+                        <svg viewBox="0 0 24 24" className="w-4 h-4" style={{ color: earned ? rarity.bg : '#4b5563' }}
+                          fill={isStroke ? 'none' : 'currentColor'} stroke={isStroke ? 'currentColor' : 'none'}
+                          strokeWidth={isStroke ? 2 : 0} strokeLinecap="round" strokeLinejoin="round">
+                          <path d={iconPath} />
+                        </svg>
+                      </div>
+                      <span className={`text-[8px] font-display font-bold uppercase text-center leading-tight ${earned ? 'text-white' : 'text-gray-600'}`}>
+                        {achievement.name}
+                      </span>
+                      {earned && (
+                        <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: isShowcased ? rarity.bg : rarity.bg + 'B3' }}>
+                          {isShowcased ? (
+                            <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 text-dark-900" fill="currentColor">
+                              <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.5l-4.8 2.4.9-5.4L4.2 7.7l5.4-.8z" />
+                            </svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" className="w-2 h-2 text-dark-900" fill="none" stroke="currentColor" strokeWidth={4}>
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </div>
+                      )}
+                      {earned && <div className="w-1.5 h-1.5 rounded-full mt-1" style={{ backgroundColor: rarity.bg }} />}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
 
-        {earnedAchievements.length > 0 && (
-          <div className="space-y-1.5">
-            {earnedAchievements.map(a => {
-              const isStroke = a.category === 'strength' || a.category === 'social' || a.category === 'consistency' || a.category === 'clubs';
-              const rarity = RARITY_COLORS[a.rarity] || RARITY_COLORS.common;
-              return (
-                <div key={a.id} className="flex items-center gap-3 py-2 px-3 rounded-xl" style={{ backgroundColor: rarity.glow }}>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: rarity.bg + '20' }}>
-                    <svg viewBox="0 0 24 24" className="w-4 h-4" style={{ color: rarity.bg }}
-                      fill={isStroke ? 'none' : 'currentColor'} stroke={isStroke ? 'currentColor' : 'none'}
-                      strokeWidth={isStroke ? 2 : 0} strokeLinecap="round" strokeLinejoin="round">
-                      <path d={BADGE_ICONS[a.category]} />
-                    </svg>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-white text-xs font-display font-bold uppercase truncate">{a.name}</p>
-                    <p className="text-gray-500 text-[10px] truncate">{a.description}</p>
-                  </div>
-                  <span className="text-[8px] font-display font-bold uppercase px-1.5 py-0.5 rounded-full flex-shrink-0"
-                    style={{ color: rarity.border, backgroundColor: rarity.bg + '20', border: `1px solid ${rarity.border}30` }}>
-                    {a.rarity}
-                  </span>
+              {earnedAchievements.length > 0 && (
+                <div className="space-y-1.5">
+                  {earnedAchievements.map(a => {
+                    const isStroke = a.category === 'strength' || a.category === 'social' || a.category === 'consistency' || a.category === 'clubs';
+                    const rarity = RARITY_COLORS[a.rarity] || RARITY_COLORS.common;
+                    return (
+                      <div key={a.id} className="flex items-center gap-3 py-2 px-3 rounded-xl" style={{ backgroundColor: rarity.glow }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: rarity.bg + '20' }}>
+                          <svg viewBox="0 0 24 24" className="w-4 h-4" style={{ color: rarity.bg }}
+                            fill={isStroke ? 'none' : 'currentColor'} stroke={isStroke ? 'currentColor' : 'none'}
+                            strokeWidth={isStroke ? 2 : 0} strokeLinecap="round" strokeLinejoin="round">
+                            <path d={BADGE_ICONS[a.category]} />
+                          </svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white text-xs font-display font-bold uppercase truncate">{a.name}</p>
+                          <p className="text-gray-500 text-[10px] truncate">{a.description}</p>
+                        </div>
+                        <span className="text-[8px] font-display font-bold uppercase px-1.5 py-0.5 rounded-full flex-shrink-0"
+                          style={{ color: rarity.border, backgroundColor: rarity.bg + '20', border: `1px solid ${rarity.border}30` }}>
+                          {a.rarity}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </>
+          ) : (
+            <div className="mt-3">
+              <PremiumGate featureId={PREMIUM_FEATURES.ACHIEVEMENTS} label="Achievements">
+                <div />
+              </PremiumGate>
+            </div>
+          )
         )}
-        </>}
       </div>
 
       {/* Pro Upgrade Card */}

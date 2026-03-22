@@ -11,6 +11,7 @@ export const PREMIUM_FEATURES = {
   OVERLAY_CHARTS: 'overlay_charts',
   BW_TRENDLINE: 'bw_trendline',
   ACHIEVEMENTS: 'achievements',
+  TRAINING_TIPS: 'training_tips',
 };
 
 export function PremiumProvider({ children }) {

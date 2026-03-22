@@ -75,7 +75,7 @@ export default function Overview() {
         <h1 className="font-display font-extrabold text-3xl text-white mb-4 flex items-center gap-3">
           OVERVIEW <ProTag />
         </h1>
-        <PremiumGate featureId={PREMIUM_FEATURES.OVERLAY_CHARTS}>
+        <PremiumGate featureId={PREMIUM_FEATURES.OVERLAY_CHARTS} label="Overview Analytics">
           <div />
         </PremiumGate>
       </div>

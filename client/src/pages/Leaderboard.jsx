@@ -67,7 +67,7 @@ export default function Leaderboard() {
       </h1>
 
       {!hasPro ? (
-        <PremiumGate featureId={PREMIUM_FEATURES.FRIEND_LEADERBOARD}>
+        <PremiumGate featureId={PREMIUM_FEATURES.FRIEND_LEADERBOARD} label="Friend Leaderboard">
           <div />
         </PremiumGate>
       ) : (

@@ -70,6 +70,18 @@ router.post('/login', async (req, res) => {
   res.json({ user: safeUser });
 });
 
+// GET /api/auth/user/:id — refresh user data (e.g. premium status)
+router.get('/user/:id', async (req, res) => {
+  const result = await db.execute({
+    sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, created_at FROM users WHERE id = ?',
+    args: [parseInt(req.params.id)]
+  });
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  res.json({ user: result.rows[0] });
+});
+
 // PUT /api/auth/user/:id
 router.put('/user/:id', async (req, res) => {
   const { display_name, unit_pref, is_premium } = req.body;

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { applyThemeColor, applyThemeMode, getThemeMode } from '../utils/colors';
+import { api } from '../utils/api';
 
 const AuthContext = createContext(null);
 
@@ -15,6 +16,17 @@ export function AuthProvider({ children }) {
     applyThemeMode(getThemeMode());
     return null;
   });
+
+  // Refresh user data from server on app load (syncs premium status, etc.)
+  useEffect(() => {
+    if (user?.id) {
+      api.getUser(user.id)
+        .then(data => {
+          if (data.user) setUser(prev => ({ ...prev, ...data.user }));
+        })
+        .catch(() => {}); // silently fail if offline
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (user) {

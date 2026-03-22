@@ -244,7 +244,7 @@ export default function MyLifts() {
 
               {/* BW Ratio Trend (Premium) */}
               {bwKg && logs.length > 1 && (
-                <PremiumGate featureId={PREMIUM_FEATURES.STRENGTH_BW_RATIO_CHART} blurContent>
+                <PremiumGate featureId={PREMIUM_FEATURES.STRENGTH_BW_RATIO_CHART} label="Strength-to-BW Ratio" blurContent>
                   <div className="card mb-4">
                     <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-2 flex items-center gap-2">
                       Strength-to-BW Ratio Trend

@@ -209,7 +209,7 @@ export default function Dashboard() {
 
       {/* Exercise Comparison Chart (Premium) — works with any available lifts */}
       {liftCards.length >= 1 && (
-        <PremiumGate featureId={PREMIUM_FEATURES.OVERLAY_CHARTS} blurContent>
+        <PremiumGate featureId={PREMIUM_FEATURES.OVERLAY_CHARTS} label="Exercise Comparison" blurContent>
           <div className="card mb-6">
             <h3 className="font-display font-bold text-sm uppercase text-gray-400 mb-2 flex items-center gap-2">
               Exercise Comparison
