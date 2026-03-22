@@ -5,6 +5,7 @@ import { usePremium, PREMIUM_FEATURES } from '../context/PremiumContext';
 import PremiumGate, { ProTag } from '../components/PremiumGate';
 import { useNotification } from '../context/NotificationContext';
 import { api } from '../utils/api';
+// html-to-image loaded dynamically in share handler
 import { ACHIEVEMENTS, BADGE_ICONS, RARITY_COLORS, computeStats, getEarnedAchievements, resolveRarity } from '../utils/achievements';
 import { calcE1RM, getTier, getPercentile, TIER_THRESHOLDS } from '../utils/benchmarks';
 import { formatWeight, inputToKg, kgToDisplay, formatDate } from '../utils/conversions';
@@ -53,6 +54,7 @@ export default function Profile() {
   const imgRef = useRef(null);
   const cropContainerRef = useRef(null);
   const dragRef = useRef({ dragging: false, lastX: 0, lastY: 0, initialDist: 0, initialScale: 1 });
+  const profileCardRef = useRef(null);
 
   // Workout tracker (localStorage)
   const [workoutDays, setWorkoutDays] = useState(() => {
@@ -299,7 +301,7 @@ export default function Profile() {
   return (
     <div className="px-4 pt-6 pb-4 overflow-x-hidden">
       {/* Profile Header Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dark-800 via-dark-800 to-dark-700 border border-dark-600 p-5 mb-5" style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}>
+      <div ref={profileCardRef} className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dark-800 via-dark-800 to-dark-700 border border-dark-600 p-5 mb-5" style={{ WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)' }}>
         <div className="absolute -top-12 -right-12 w-40 h-40 bg-primary/10 rounded-full blur-3xl" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', WebkitTransform: 'translate3d(0,0,0)', transform: 'translate3d(0,0,0)' }} />
         <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', WebkitTransform: 'translate3d(0,0,0)', transform: 'translate3d(0,0,0)' }} />
 
@@ -356,12 +358,76 @@ export default function Profile() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" data-share-controls>
               {isPremium && (
                 <span className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-xs font-display font-bold uppercase px-3 py-1.5 rounded-full tracking-wider border border-primary/20">
                   PRO
                 </span>
               )}
+              <button
+                onClick={async () => {
+                  if (!profileCardRef.current) return;
+                  addNotification('Generating banner...', 'info');
+                  try {
+                    // Hide share/settings buttons during capture
+                    const btns = profileCardRef.current.querySelector('[data-share-controls]');
+                    if (btns) btns.style.display = 'none';
+
+                    // Add a watermark temporarily
+                    const watermark = document.createElement('div');
+                    watermark.style.cssText = 'text-align:center;padding-top:12px;font-family:Barlow Condensed,sans-serif;font-weight:800;font-size:14px;letter-spacing:2px;text-transform:uppercase;';
+                    watermark.innerHTML = '<span style="color:#fff">STRENGTH</span><span style="color:var(--color-primary,#FFD700)">CHARTS</span>';
+                    profileCardRef.current.appendChild(watermark);
+
+                    const { toPng } = await import('html-to-image');
+                    const dataUrl = await toPng(profileCardRef.current, {
+                      backgroundColor: '#0a0a0a',
+                      pixelRatio: 3,
+                    });
+
+                    // Clean up
+                    profileCardRef.current.removeChild(watermark);
+                    if (btns) btns.style.display = '';
+
+                    // Convert to blob for sharing
+                    const res = await fetch(dataUrl);
+                    const blob = await res.blob();
+                    const file = new File([blob], 'strengthcharts-profile.png', { type: 'image/png' });
+
+                    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                      await navigator.share({
+                        files: [file],
+                        title: 'My StrengthCharts Profile',
+                        text: `Check out my stats on StrengthCharts! 💪`,
+                      });
+                    } else {
+                      // Fallback: download the image
+                      const a = document.createElement('a');
+                      a.href = dataUrl;
+                      a.download = 'strengthcharts-profile.png';
+                      a.click();
+                      addNotification('Banner saved!', 'info');
+                    }
+                  } catch (err) {
+                    const msg = err?.message || '';
+                    if (!msg.includes('abort') && !msg.includes('cancel')) {
+                      addNotification('Could not generate banner', 'error');
+                    }
+                    // Clean up on error
+                    const btns = profileCardRef.current?.querySelector('[data-share-controls]');
+                    if (btns) btns.style.display = '';
+                  }
+                }}
+                className="w-9 h-9 rounded-full bg-dark-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+              >
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                </svg>
+              </button>
               <button
                 onClick={() => navigate('/settings')}
                 className="w-9 h-9 rounded-full bg-dark-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors"

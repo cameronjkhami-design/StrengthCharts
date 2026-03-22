@@ -459,6 +459,58 @@ export default function Friends() {
         </div>
       </div>
 
+      {/* Invite Friends Banner */}
+      <button
+        onClick={async () => {
+          const link = `https://strength-charts.vercel.app/invite?ref=${user.username}`;
+          const shareData = {
+            title: 'StrengthCharts',
+            text: 'Join me on StrengthCharts! Track your PRs and compete with friends.',
+            url: link,
+          };
+          try {
+            if (navigator.share) {
+              await navigator.share(shareData);
+            } else {
+              await navigator.clipboard.writeText(link);
+              addNotification('Invite link copied!', 'info');
+            }
+          } catch (err) {
+            if (!err?.message?.includes('abort') && !err?.message?.includes('cancel')) {
+              try {
+                await navigator.clipboard.writeText(link);
+                addNotification('Invite link copied!', 'info');
+              } catch {
+                addNotification('Could not share', 'error');
+              }
+            }
+          }
+        }}
+        className="w-full mb-4 py-3 px-4 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between active:scale-[0.98] transition-transform"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 text-primary" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="8.5" cy="7" r="4" />
+              <line x1="20" y1="8" x2="20" y2="14" />
+              <line x1="23" y1="11" x2="17" y2="11" />
+            </svg>
+          </div>
+          <div className="text-left">
+            <p className="text-primary font-display font-bold text-sm uppercase">Invite Friends</p>
+            <p className="text-gray-500 text-xs">Share a link to add friends</p>
+          </div>
+        </div>
+        <svg viewBox="0 0 24 24" className="w-5 h-5 text-primary/60" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+        </svg>
+      </button>
+
       {/* Search Results */}
       {searchQuery.trim().length >= 2 && (
         <div className="mb-4 space-y-1">
