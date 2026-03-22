@@ -13,12 +13,18 @@ router.get('/', async (req, res) => {
   let users;
 
   if (userId) {
+    const uid = parseInt(userId);
+    // Verify the requesting user matches
+    if (req.userId !== uid) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
     const friendResult = await db.execute({
       sql: "SELECT friend_id FROM friendships WHERE user_id = ? AND status = 'accepted'",
-      args: [parseInt(userId)]
+      args: [uid]
     });
     const friendIds = friendResult.rows.map(r => r.friend_id);
-    friendIds.push(parseInt(userId));
+    friendIds.push(uid);
     const placeholders = friendIds.map(() => '?').join(',');
     const userResult = await db.execute({
       sql: `SELECT id, username, display_name FROM users WHERE id IN (${placeholders})`,

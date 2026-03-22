@@ -30,6 +30,8 @@ server/
   index.js            # Server entry point (local dev, port 3001)
   db.js               # Turso DB init, schema migrations, CREATE TABLE IF NOT EXISTS
   seed.js             # Sample data (3 users, lift logs) — DO NOT run on production
+  middleware/
+    auth.js            # JWT token generation, verification middleware (authenticateToken)
   routes/
     auth.js            # Login, signup, PIN reset, email verification, delete account
     lifts.js           # Log/fetch/delete lift records, PRs, batch delete
@@ -290,10 +292,16 @@ Additional: Pull-ups, Incline DB Press, Pendulum Squat, Hack Squat, and many mor
 - **Auto-refresh**: AuthContext fetches fresh user data from server on app load, syncing premium status without re-login
 - Premium features: friend leaderboard, overlay charts, BW ratio trends, bodyweight trendline, achievements, export data, training tips
 
-### Authentication
-- PIN-based (6-digit codes, SHA256 hashed)
-- No passwords — PINs only
-- Reset via email with 6-digit code (15-min expiry, sent via Resend)
+### Authentication & Security
+- PIN-based (6-digit codes, bcrypt hashed with salt) — legacy SHA256 hashes auto-migrate on login
+- JWT tokens issued on login/signup, stored in `localStorage` key `sc_token`, sent as `Authorization: Bearer <token>` header
+- JWT middleware (`server/middleware/auth.js`) protects all routes except login/signup/forgot-pin/reset-pin
+- All protected endpoints verify `req.userId` matches the target user (ownership checks prevent IDOR)
+- Client auto-logs out on 401 responses (expired/invalid token)
+- Rate limiting: 10 login attempts / 15min, 5 reset attempts / 15min (`express-rate-limit`)
+- CORS restricted to: `strength-charts.vercel.app`, `capacitor://localhost`, `http://localhost`, `http://localhost:5173`
+- Server-side input validation: weight 0-1000kg, reps 1-100, RPE 0-10, exercise name 1-100 chars, notes max 500 chars, bodyweight 20-350kg
+- Reset via email with 6-digit code (15-min expiry, bcrypt hashed, sent via Resend)
 
 ### Styling
 - Tailwind CSS with light/dark theme support via CSS variables
@@ -316,6 +324,7 @@ Additional: Pull-ups, Incline DB Press, Pendulum Squat, Hack Squat, and many mor
 
 ### LocalStorage Keys
 - `sc_user` — authenticated user object
+- `sc_token` — JWT authentication token
 - `sc_haptics` — haptics enabled/disabled
 - `sc_theme_mode` — 'dark' or 'light' (appearance mode)
 - `sc_workout_days` — array of ISO date strings for consistency tracking
@@ -352,6 +361,7 @@ node server/seed.js
   - `TURSO_DATABASE_URL` — Turso connection string
   - `TURSO_AUTH_TOKEN` — Turso auth token
   - `RESEND_API_KEY` — Resend API key (for password reset emails)
+  - `JWT_SECRET` — Secret key for signing JWT tokens (must be set in production!)
 
 ### Capacitor / Native Builds
 - Config: `client/capacitor.config.ts`

@@ -1,15 +1,37 @@
 const express = require('express');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { Resend } = require('resend');
+const rateLimit = require('express-rate-limit');
 const { db } = require('../db');
+const { generateToken, authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.RESEND_FROM || 'StrengthCharts <onboarding@resend.dev>';
+const BCRYPT_ROUNDS = 10;
 
-function hashPin(pin) {
+// Legacy SHA256 hash — used only for migration of old PINs
+function hashPinLegacy(pin) {
   return crypto.createHash('sha256').update(pin).digest('hex');
 }
+
+// Rate limiters
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,                   // 10 attempts per window
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,                    // 5 attempts per window
+  message: { error: 'Too many reset attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
@@ -37,20 +59,24 @@ router.post('/signup', async (req, res) => {
     return res.status(409).json({ error: 'Email already in use' });
   }
 
+  const pinHash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
+
   const result = await db.execute({
     sql: 'INSERT INTO users (username, pin_hash, display_name, email) VALUES (?, ?, ?, ?)',
-    args: [username.toLowerCase(), hashPin(pin), display_name || username, email.toLowerCase()]
+    args: [username.toLowerCase(), pinHash, display_name || username, email.toLowerCase()]
   });
 
   const user = await db.execute({
     sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, created_at FROM users WHERE id = ?',
     args: [Number(result.lastInsertRowid)]
   });
-  res.status(201).json({ user: user.rows[0] });
+
+  const token = generateToken(user.rows[0].id);
+  res.status(201).json({ user: user.rows[0], token });
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { username, pin } = req.body;
   if (!username || !pin) {
     return res.status(400).json({ error: 'Username and PIN required' });
@@ -62,19 +88,46 @@ router.post('/login', async (req, res) => {
   });
 
   const user = result.rows[0];
-  if (!user || user.pin_hash !== hashPin(pin)) {
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid username or PIN' });
+  }
+
+  // Check PIN — support both bcrypt and legacy SHA256 hashes
+  let pinValid = false;
+  if (user.pin_hash.startsWith('$2')) {
+    // bcrypt hash
+    pinValid = await bcrypt.compare(pin, user.pin_hash);
+  } else {
+    // Legacy SHA256 — migrate to bcrypt on successful login
+    pinValid = user.pin_hash === hashPinLegacy(pin);
+    if (pinValid) {
+      const newHash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
+      await db.execute({
+        sql: 'UPDATE users SET pin_hash = ? WHERE id = ?',
+        args: [newHash, user.id]
+      });
+    }
+  }
+
+  if (!pinValid) {
     return res.status(401).json({ error: 'Invalid username or PIN' });
   }
 
   const { pin_hash, ...safeUser } = user;
-  res.json({ user: safeUser });
+  const token = generateToken(user.id);
+  res.json({ user: safeUser, token });
 });
 
-// GET /api/auth/user/:id — refresh user data (e.g. premium status)
-router.get('/user/:id', async (req, res) => {
+// GET /api/auth/user/:id — refresh user data (requires auth)
+router.get('/user/:id', authenticateToken, async (req, res) => {
+  const targetId = parseInt(req.params.id);
+  if (req.userId !== targetId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   const result = await db.execute({
     sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, created_at FROM users WHERE id = ?',
-    args: [parseInt(req.params.id)]
+    args: [targetId]
   });
   if (result.rows.length === 0) {
     return res.status(404).json({ error: 'User not found' });
@@ -83,7 +136,12 @@ router.get('/user/:id', async (req, res) => {
 });
 
 // PUT /api/auth/user/:id
-router.put('/user/:id', async (req, res) => {
+router.put('/user/:id', authenticateToken, async (req, res) => {
+  const targetId = parseInt(req.params.id);
+  if (req.userId !== targetId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   const { display_name, unit_pref, is_premium } = req.body;
   const updates = [];
   const params = [];
@@ -100,7 +158,7 @@ router.put('/user/:id', async (req, res) => {
 
   if (updates.length === 0) return res.status(400).json({ error: 'Nothing to update' });
 
-  params.push(parseInt(req.params.id));
+  params.push(targetId);
   await db.execute({
     sql: `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
     args: params
@@ -108,31 +166,36 @@ router.put('/user/:id', async (req, res) => {
 
   const result = await db.execute({
     sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, created_at FROM users WHERE id = ?',
-    args: [parseInt(req.params.id)]
+    args: [targetId]
   });
   res.json({ user: result.rows[0] });
 });
 
 // PUT /api/auth/user/:id/premium
-router.put('/user/:id/premium', async (req, res) => {
+router.put('/user/:id/premium', authenticateToken, async (req, res) => {
+  const targetId = parseInt(req.params.id);
+  if (req.userId !== targetId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   const { is_premium } = req.body;
   const purchased_at = is_premium ? new Date().toISOString() : null;
 
   await db.execute({
     sql: 'UPDATE users SET is_premium = ?, premium_purchased_at = ? WHERE id = ?',
-    args: [is_premium ? 1 : 0, purchased_at, parseInt(req.params.id)]
+    args: [is_premium ? 1 : 0, purchased_at, targetId]
   });
 
   const result = await db.execute({
     sql: 'SELECT id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, created_at FROM users WHERE id = ?',
-    args: [parseInt(req.params.id)]
+    args: [targetId]
   });
 
   res.json({ user: result.rows[0] });
 });
 
 // POST /api/auth/forgot-pin — send 6-digit reset code to email
-router.post('/forgot-pin', async (req, res) => {
+router.post('/forgot-pin', resetLimiter, async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
 
@@ -151,6 +214,7 @@ router.post('/forgot-pin', async (req, res) => {
   // Generate 6-digit code
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
+  const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
 
   // Invalidate previous tokens
   await db.execute({
@@ -160,7 +224,7 @@ router.post('/forgot-pin', async (req, res) => {
 
   await db.execute({
     sql: 'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
-    args: [user.id, hashPin(code), expiresAt]
+    args: [user.id, codeHash, expiresAt]
   });
 
   // Send email via Resend
@@ -191,7 +255,7 @@ router.post('/forgot-pin', async (req, res) => {
 });
 
 // POST /api/auth/reset-pin — verify code and set new PIN
-router.post('/reset-pin', async (req, res) => {
+router.post('/reset-pin', resetLimiter, async (req, res) => {
   const { email, code, new_pin } = req.body;
   if (!email || !code || !new_pin) {
     return res.status(400).json({ error: 'Email, code, and new PIN required' });
@@ -225,27 +289,40 @@ router.post('/reset-pin', async (req, res) => {
     return res.status(400).json({ error: 'Reset code has expired. Please request a new one.' });
   }
 
-  if (tokenRow.token !== hashPin(code)) {
+  // Support both bcrypt and legacy SHA256 reset tokens
+  let codeValid = false;
+  if (tokenRow.token.startsWith('$2')) {
+    codeValid = await bcrypt.compare(code, tokenRow.token);
+  } else {
+    codeValid = tokenRow.token === hashPinLegacy(code);
+  }
+
+  if (!codeValid) {
     return res.status(400).json({ error: 'Invalid reset code' });
   }
 
-  // Mark token as used and update PIN
+  // Mark token as used and update PIN with bcrypt
   await db.execute({
     sql: 'UPDATE password_reset_tokens SET used = 1 WHERE id = ?',
     args: [tokenRow.id]
   });
 
+  const newPinHash = await bcrypt.hash(new_pin, BCRYPT_ROUNDS);
   await db.execute({
     sql: 'UPDATE users SET pin_hash = ? WHERE id = ?',
-    args: [hashPin(new_pin), userId]
+    args: [newPinHash, userId]
   });
 
   res.json({ message: 'PIN reset successfully. You can now log in.' });
 });
 
 // DELETE /api/auth/user/:id — delete account and all associated data
-router.delete('/user/:id', async (req, res) => {
+router.delete('/user/:id', authenticateToken, async (req, res) => {
   const userId = parseInt(req.params.id);
+  if (req.userId !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   const { pin } = req.body;
   if (!pin) return res.status(400).json({ error: 'PIN required to delete account' });
 
@@ -257,7 +334,17 @@ router.delete('/user/:id', async (req, res) => {
   if (userResult.rows.length === 0) {
     return res.status(404).json({ error: 'User not found' });
   }
-  if (userResult.rows[0].pin_hash !== hashPin(pin)) {
+
+  // Support both bcrypt and legacy SHA256
+  let pinValid = false;
+  const storedHash = userResult.rows[0].pin_hash;
+  if (storedHash.startsWith('$2')) {
+    pinValid = await bcrypt.compare(pin, storedHash);
+  } else {
+    pinValid = storedHash === hashPinLegacy(pin);
+  }
+
+  if (!pinValid) {
     return res.status(401).json({ error: 'Incorrect PIN' });
   }
 

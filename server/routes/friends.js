@@ -10,6 +10,10 @@ router.get('/search', async (req, res) => {
   }
 
   const uid = parseInt(userId);
+  if (req.userId !== uid) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   const searchTerm = `%${q.trim()}%`;
   const result = await db.execute({
     sql: `SELECT u.id, u.username, u.display_name,
@@ -46,26 +50,36 @@ router.get('/search', async (req, res) => {
 
 // GET /api/friends/:userId — list accepted friends
 router.get('/:userId', async (req, res) => {
+  const targetId = parseInt(req.params.userId);
+  if (req.userId !== targetId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   const result = await db.execute({
     sql: `SELECT u.id, u.username, u.display_name, u.profile_photo
           FROM friendships f
           JOIN users u ON u.id = f.friend_id
           WHERE f.user_id = ? AND f.status = 'accepted'
           ORDER BY u.display_name ASC`,
-    args: [parseInt(req.params.userId)]
+    args: [targetId]
   });
   res.json({ friends: result.rows });
 });
 
 // GET /api/friends/:userId/pending — list incoming pending requests
 router.get('/:userId/pending', async (req, res) => {
+  const targetId = parseInt(req.params.userId);
+  if (req.userId !== targetId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   const result = await db.execute({
     sql: `SELECT u.id, u.username, u.display_name, f.created_at
           FROM friendships f
           JOIN users u ON u.id = f.user_id
           WHERE f.friend_id = ? AND f.status = 'pending'
           ORDER BY f.created_at DESC`,
-    args: [parseInt(req.params.userId)]
+    args: [targetId]
   });
   res.json({ requests: result.rows });
 });
@@ -75,6 +89,11 @@ router.post('/', async (req, res) => {
   const { user_id, friend_id } = req.body;
   if (!user_id || !friend_id || user_id === friend_id) {
     return res.status(400).json({ error: 'Invalid user or friend ID' });
+  }
+
+  // Can only send requests as yourself
+  if (req.userId !== user_id) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   try {
@@ -107,7 +126,12 @@ router.post('/', async (req, res) => {
 // PUT /api/friends/accept — accept incoming request
 router.put('/accept', async (req, res) => {
   const { user_id, friend_id } = req.body;
-  // user_id is the person accepting, friend_id is the person who sent the request
+
+  // user_id is the person accepting — must be the authenticated user
+  if (req.userId !== user_id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   try {
     await db.batch([
       { sql: "UPDATE friendships SET status = 'accepted' WHERE user_id = ? AND friend_id = ?", args: [friend_id, user_id] },
@@ -122,6 +146,12 @@ router.put('/accept', async (req, res) => {
 // PUT /api/friends/decline — decline/cancel pending request
 router.put('/decline', async (req, res) => {
   const { user_id, friend_id } = req.body;
+
+  // user_id is the person declining — must be the authenticated user
+  if (req.userId !== user_id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   try {
     await db.execute({
       sql: 'DELETE FROM friendships WHERE user_id = ? AND friend_id = ?',
@@ -140,6 +170,11 @@ router.delete('/', async (req, res) => {
     return res.status(400).json({ error: 'Invalid user or friend ID' });
   }
 
+  // Can only remove friendships as yourself
+  if (req.userId !== user_id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   try {
     await db.batch([
       { sql: 'DELETE FROM friendships WHERE user_id = ? AND friend_id = ?', args: [user_id, friend_id] },
@@ -155,6 +190,11 @@ router.delete('/', async (req, res) => {
 router.get('/:userId/profile/:friendId', async (req, res) => {
   const userId = parseInt(req.params.userId);
   const friendId = parseInt(req.params.friendId);
+
+  // Must be the requesting user
+  if (req.userId !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
 
   // Verify they are friends
   const friendship = await db.execute({

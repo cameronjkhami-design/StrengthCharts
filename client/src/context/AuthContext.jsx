@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { applyThemeColor, applyThemeMode, getThemeMode } from '../utils/colors';
-import { api } from '../utils/api';
+import { api, setAuthToken } from '../utils/api';
 
 const AuthContext = createContext(null);
 
@@ -38,8 +38,14 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
-  const login = (userData) => setUser(userData);
-  const logout = () => setUser(null);
+  const login = (userData, token) => {
+    if (token) setAuthToken(token);
+    setUser(userData);
+  };
+  const logout = () => {
+    setAuthToken(null);
+    setUser(null);
+  };
   const updateUser = (updates) => setUser(prev => ({ ...prev, ...updates }));
 
   return (

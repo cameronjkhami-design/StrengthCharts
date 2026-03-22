@@ -12,13 +12,43 @@ function getBaseUrl() {
 
 const BASE = getBaseUrl();
 
+// Token management
+let authToken = localStorage.getItem('sc_token');
+
+export function setAuthToken(token) {
+  authToken = token;
+  if (token) {
+    localStorage.setItem('sc_token', token);
+  } else {
+    localStorage.removeItem('sc_token');
+  }
+}
+
+export function getAuthToken() {
+  return authToken;
+}
+
 async function request(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+
+  // Attach JWT token if available
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...options,
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
+    // Auto-logout on 401 (expired/invalid token) — skip for login/signup routes
+    if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/signup')) {
+      setAuthToken(null);
+      localStorage.removeItem('sc_user');
+      window.location.href = '/login';
+      return;
+    }
     throw new Error(data.error || 'Request failed');
   }
   return res.json();

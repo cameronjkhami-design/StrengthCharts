@@ -7,11 +7,26 @@ const bodyweightRoutes = require('./routes/bodyweight');
 const leaderboardRoutes = require('./routes/leaderboard');
 const friendRoutes = require('./routes/friends');
 const { initDb } = require('./db');
+const { authenticateToken } = require('./middleware/auth');
 
 const app = express();
 
+// CORS — restrict to known origins
+const ALLOWED_ORIGINS = [
+  'https://strength-charts.vercel.app',
+  'capacitor://localhost',    // iOS Capacitor
+  'http://localhost',         // Android Capacitor
+  'http://localhost:5173',    // Vite dev
+  'http://localhost:3001',    // Local server
+];
+
 app.use(cors({
-  origin: (origin, cb) => cb(null, true),
+  origin: (origin, cb) => {
+    // Allow requests with no origin (mobile apps, server-to-server)
+    if (!origin) return cb(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
 }));
 app.use(express.json());
@@ -28,10 +43,12 @@ app.use(async (req, res, next) => {
 });
 
 // API routes
+// Auth routes handle their own authentication (login/signup are public)
 app.use('/api/auth', authRoutes);
-app.use('/api/lifts', liftRoutes);
-app.use('/api/bodyweight', bodyweightRoutes);
-app.use('/api/friends', friendRoutes);
-app.use('/api/leaderboard', leaderboardRoutes);
+// All other routes require JWT authentication
+app.use('/api/lifts', authenticateToken, liftRoutes);
+app.use('/api/bodyweight', authenticateToken, bodyweightRoutes);
+app.use('/api/friends', authenticateToken, friendRoutes);
+app.use('/api/leaderboard', authenticateToken, leaderboardRoutes);
 
 module.exports = app;

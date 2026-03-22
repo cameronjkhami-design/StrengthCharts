@@ -35,7 +35,7 @@ export default function Login() {
     setLoading(true);
     try {
       const data = await api.login(username, pin);
-      login(data.user);
+      login(data.user, data.token);
       navigate('/');
     } catch (err) {
       setError(err.message);
@@ -58,7 +58,7 @@ export default function Login() {
     setLoading(true);
     try {
       const data = await api.signup(username, pin, displayName || username, email);
-      login(data.user);
+      login(data.user, data.token);
       navigate('/');
     } catch (err) {
       setError(err.message);
