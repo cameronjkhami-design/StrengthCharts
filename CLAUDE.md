@@ -50,7 +50,7 @@ client/src/
     Overview.jsx       # Pro-gated stats: volume chart, strength profile, rankings, strength legend
     Friends.jsx        # Friend search, requests, leaderboard (embedded sub-tab)
     FriendProfile.jsx  # View friend's public profile (respects privacy settings)
-    Profile.jsx        # Achievements, bodyweight, profile photo, showcase badges
+    Profile.jsx        # Achievements, bodyweight, profile photo, showcase badges (BW trendline, achievements, training tips are pro-gated collapsible sections)
     Settings.jsx       # Display name, privacy, haptics, theme color, weight unit, sex
     PlateCalculator.jsx # Barbell plate calculator with IPA/IPF color standards
     Challenges.jsx     # Daily/weekly/monthly/friend challenges with progress tracking
@@ -176,6 +176,7 @@ CREATE TABLE friendships (
 ### Auth (`/api/auth`)
 - `POST /signup` — Create user (username, pin, display_name, email)
 - `POST /login` — Authenticate (username, pin) → returns user object
+- `GET /user/:id` — Fetch fresh user data (used to sync premium status on app load)
 - `PUT /user/:id` — Update display_name, unit_pref, privacy_settings, theme_color, sex, profile_photo, showcase_badges
 - `PUT /user/:id/premium` — Set premium status
 - `POST /forgot-pin` — Send 6-digit reset code via Resend email
@@ -282,9 +283,11 @@ Additional: Pull-ups, Incline DB Press, Pendulum Squat, Hack Squat, and many mor
 ### Premium / Monetization
 - Pro features are **gated** — `PremiumContext.hasAccess()` checks `isPremium` and ad-unlocked features
 - **Pricing**: $2.99/month, $24.99/year, $69.99 lifetime (displayed in `ProUpgradeModal`)
-- **PremiumGate** component shows "Unlock with Pro" + "Watch Ad — Unlock 24hrs" buttons on gated features
+- **PremiumGate** component accepts `label` prop (e.g. "Exercise Comparison") and shows "Unlock {label}" + "Watch Ad — Unlock 24hrs" buttons
+- On Profile page, pro features (Training Tips, BW Trendline, Achievements) use collapsible sections: start minimized with PRO tag, expand to show PremiumGate or content based on access
 - **RevenueCat** handles IAP for Pro upgrade (native only, entitlement: `'pro'`)
 - **AdMob** rewarded ads unlock individual features for 24 hours (native only, stored in `localStorage` key `sc_unlocked`)
+- **Auto-refresh**: AuthContext fetches fresh user data from server on app load, syncing premium status without re-login
 - Premium features: friend leaderboard, overlay charts, BW ratio trends, bodyweight trendline, achievements, export data, training tips
 
 ### Authentication
