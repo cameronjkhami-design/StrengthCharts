@@ -282,7 +282,7 @@ export default function Dashboard() {
               <ProgressBar
                 progress={tierInfo.progress}
                 color={tierInfo.color}
-                sublabel={`${tierInfo.progress}% to ${tierInfo.nextTier}`}
+                sublabel={`${tierInfo.progress}% toward ${tierInfo.nextTier}`}
               />
             )}
           </div>
