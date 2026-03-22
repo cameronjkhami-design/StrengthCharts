@@ -173,7 +173,7 @@ export default function Login() {
     try {
       let idToken;
       if (window.Capacitor?.isNativePlatform()) {
-        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        const { GoogleAuth } = await import('@southdevs/capacitor-google-auth');
         await GoogleAuth.initialize({
           clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
           scopes: ['email', 'profile'],
