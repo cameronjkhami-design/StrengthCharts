@@ -52,8 +52,33 @@ export default function RestTimer() {
         setRunning(false);
         setFinished(true);
         addNotification('Rest timer done! Get back to it!', 'success');
-        // Vibrate if available
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+        // Audible alert — play 3 beeps using Web Audio API
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const playBeep = (time) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            osc.type = 'square';
+            gain.gain.value = 0.3;
+            osc.start(ctx.currentTime + time);
+            osc.stop(ctx.currentTime + time + 0.15);
+          };
+          playBeep(0);
+          playBeep(0.25);
+          playBeep(0.5);
+        } catch {}
+        // Vibrate
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200, 100, 200]);
+        if (window.Capacitor?.isNativePlatform()) {
+          import('@capacitor/haptics').then(({ Haptics, ImpactStyle }) => {
+            Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+            setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {}), 300);
+            setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {}), 600);
+          }).catch(() => {});
+        }
       }
     }, 100);
   }, [remaining, addNotification]);
