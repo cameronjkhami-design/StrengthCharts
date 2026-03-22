@@ -570,7 +570,7 @@ export default function Friends() {
           )}
           <div
             ref={listRef}
-            className="space-y-2"
+            className="space-y-2 select-none"
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
