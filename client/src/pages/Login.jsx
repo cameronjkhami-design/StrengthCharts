@@ -146,8 +146,10 @@ export default function Login() {
           clientId: 'com.strengthcharts.app',
           redirectURI: 'https://strength-charts.vercel.app',
           scopes: 'email name',
+          state: String(Date.now()),
         });
-        idToken = result.response.identityToken;
+        idToken = result.response?.identityToken;
+        if (!idToken) throw new Error('No identity token received from Apple');
       } else {
         setError('Apple Sign In is only available on iOS');
         setLoading(false);
@@ -157,10 +159,13 @@ export default function Login() {
       const data = await api.oauthApple(idToken);
       handleOAuthResult(data);
     } catch (err) {
-      if (err.message?.includes('canceled') || err.message?.includes('cancelled')) {
+      const msg = err?.message || String(err);
+      if (msg.includes('cancel') || msg.includes('1001')) {
         // User cancelled — do nothing
+      } else if (msg.includes('1000')) {
+        setError('Enable "Sign in with Apple" in Xcode → Signing & Capabilities');
       } else {
-        setError(err.message || 'Apple sign-in failed');
+        setError(msg || 'Apple sign-in failed');
       }
     } finally {
       setLoading(false);
@@ -174,12 +179,10 @@ export default function Login() {
       let idToken;
       if (window.Capacitor?.isNativePlatform()) {
         const { GoogleAuth } = await import('@southdevs/capacitor-google-auth');
-        await GoogleAuth.initialize({
-          clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
-          scopes: ['email', 'profile'],
-        });
+        await GoogleAuth.initialize();
         const result = await GoogleAuth.signIn();
-        idToken = result.authentication.idToken;
+        idToken = result.authentication?.idToken;
+        if (!idToken) throw new Error('No ID token received from Google');
       } else {
         setError('Google Sign In is only available on mobile');
         setLoading(false);
@@ -189,9 +192,10 @@ export default function Login() {
       const data = await api.oauthGoogle(idToken);
       handleOAuthResult(data);
     } catch (err) {
-      if (err.message?.includes('canceled') || err.message?.includes('cancelled')) {
+      const msg = err?.message || String(err);
+      if (msg.includes('cancel') || msg.includes('dismissed')) {
         // User cancelled — do nothing
-      } else {
+      } else if (msg.includes('scope') || msg.includes('client')) {
         setError(err.message || 'Google sign-in failed');
       }
     } finally {

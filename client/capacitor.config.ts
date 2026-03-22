@@ -33,6 +33,13 @@ const config: CapacitorConfig = {
       backgroundColor: '#0a0a0a',
       showSpinner: false,
     },
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      // Set your iOS client ID from Google Cloud Console here:
+      // iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+      // Set your server/web client ID here:
+      // serverClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    },
   },
 };
 
