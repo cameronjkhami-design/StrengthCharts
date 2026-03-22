@@ -158,18 +158,35 @@ export default function Dashboard() {
                 const d = new Date();
                 d.setDate(d.getDate() - d.getDay() + i);
                 const dateStr = d.toISOString().split('T')[0];
-                const isActive = workoutDays.includes(dateStr) || allLogs.some(l => l.logged_at?.startsWith(dateStr));
+                const hasLiftLog = allLogs.some(l => l.logged_at?.startsWith(dateStr));
+                const manuallyMarked = workoutDays.includes(dateStr);
+                const isActive = manuallyMarked || hasLiftLog;
                 const isToday = dateStr === todayStr;
+                const handleDayTap = () => {
+                  if (manuallyMarked) {
+                    // Deselect
+                    const next = workoutDays.filter(dd => dd !== dateStr);
+                    setWorkoutDays(next);
+                    localStorage.setItem('sc_workout_days', JSON.stringify(next));
+                  } else {
+                    // Select
+                    const next = [...workoutDays, dateStr];
+                    setWorkoutDays(next);
+                    localStorage.setItem('sc_workout_days', JSON.stringify(next));
+                  }
+                };
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center gap-1">
                     <span className="text-gray-500 text-[9px] font-display font-bold">{day}</span>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-display font-bold ${
+                    <button
+                      onClick={handleDayTap}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-display font-bold transition-all active:scale-90 ${
                       isActive ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
                       isToday ? 'bg-dark-600 text-gray-400 border border-primary/30' :
                       'bg-dark-700 text-gray-600 border border-dark-600'
                     }`}>
                       {d.getDate()}
-                    </div>
+                    </button>
                   </div>
                 );
               })}
@@ -182,20 +199,27 @@ export default function Dashboard() {
       <Link to="/log" className="btn-primary w-full block text-center mb-3">
         + Log New Lift
       </Link>
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <Link to="/plate-calculator" className="btn-secondary block text-center flex items-center justify-center gap-2">
-          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        <Link to="/plate-calculator" className="btn-secondary block text-center flex items-center justify-center gap-1.5 text-[11px]">
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
             <line x1="8" y1="12" x2="16" y2="12" />
             <line x1="12" y1="8" x2="12" y2="16" />
           </svg>
           Plate Calc
         </Link>
-        <Link to="/challenges" className="btn-secondary block text-center flex items-center justify-center gap-2">
-          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <Link to="/challenges" className="btn-secondary block text-center flex items-center justify-center gap-1.5 text-[11px]">
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M14.5 2L6 14h8L13.5 22 22 10h-8z" />
           </svg>
           Challenges
+        </Link>
+        <Link to="/rest-timer" className="btn-secondary block text-center flex items-center justify-center gap-1.5 text-[11px]">
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          Rest Timer
         </Link>
       </div>
 

@@ -39,6 +39,7 @@ import FriendProfile from './pages/FriendProfile';
 import Settings from './pages/Settings';
 import PlateCalculator from './pages/PlateCalculator';
 import Challenges from './pages/Challenges';
+import RestTimer from './pages/RestTimer';
 
 function PageWrapper({ children }) {
   const location = useLocation();
@@ -69,6 +70,7 @@ function ProtectedLayout() {
             <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
             <Route path="/plate-calculator" element={<PageWrapper><PlateCalculator /></PageWrapper>} />
             <Route path="/challenges" element={<PageWrapper><Challenges /></PageWrapper>} />
+            <Route path="/rest-timer" element={<PageWrapper><RestTimer /></PageWrapper>} />
           </Routes>
         </div>
         <BottomNav />

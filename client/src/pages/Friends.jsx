@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
@@ -127,6 +127,111 @@ export default function Friends() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // Drag-to-reorder state
+  const [dragIdx, setDragIdx] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
+  const longPressTimer = useRef(null);
+  const touchStartY = useRef(0);
+  const listRef = useRef(null);
+
+  // Load saved friend order
+  useEffect(() => {
+    if (friends.length === 0) return;
+    const savedOrder = localStorage.getItem('sc_friends_order');
+    if (savedOrder) {
+      try {
+        const orderIds = JSON.parse(savedOrder);
+        const ordered = [];
+        for (const id of orderIds) {
+          const f = friends.find(fr => fr.id === id);
+          if (f) ordered.push(f);
+        }
+        // Add any new friends not in saved order
+        for (const f of friends) {
+          if (!ordered.find(o => o.id === f.id)) ordered.push(f);
+        }
+        if (ordered.length > 0 && JSON.stringify(ordered.map(f => f.id)) !== JSON.stringify(friends.map(f => f.id))) {
+          setFriends(ordered);
+        }
+      } catch {}
+    }
+  }, [friends.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveFriendOrder = (list) => {
+    localStorage.setItem('sc_friends_order', JSON.stringify(list.map(f => f.id)));
+  };
+
+  const handleDragStart = (idx) => {
+    setDragIdx(idx);
+    setOverIdx(idx);
+  };
+
+  const handleDragOver = (idx) => {
+    if (dragIdx === null) return;
+    setOverIdx(idx);
+  };
+
+  const handleDragEnd = () => {
+    if (dragIdx !== null && overIdx !== null && dragIdx !== overIdx) {
+      const newList = [...friends];
+      const [moved] = newList.splice(dragIdx, 1);
+      newList.splice(overIdx, 0, moved);
+      setFriends(newList);
+      saveFriendOrder(newList);
+    }
+    setDragIdx(null);
+    setOverIdx(null);
+  };
+
+  const handleTouchStart = (idx, e) => {
+    touchStartY.current = e.touches[0].clientY;
+    longPressTimer.current = setTimeout(() => {
+      handleDragStart(idx);
+      // Heavy haptic for drag start
+      if (window.Capacitor?.isNativePlatform()) {
+        import('@capacitor/haptics').then(({ Haptics, ImpactStyle }) => {
+          Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+        }).catch(() => {});
+      } else if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 500);
+  };
+
+  const handleTouchMove = (e) => {
+    if (dragIdx === null) {
+      // Cancel long press if finger moves before activation
+      if (longPressTimer.current) {
+        const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
+        if (dy > 10) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }
+      return;
+    }
+    e.preventDefault();
+    const touch = e.touches[0];
+    const listEl = listRef.current;
+    if (!listEl) return;
+    const children = listEl.children;
+    for (let i = 0; i < children.length; i++) {
+      const rect = children[i].getBoundingClientRect();
+      if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+        setOverIdx(i);
+        break;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    handleDragEnd();
   };
 
   const [confirmRemove, setConfirmRemove] = useState(null); // friendId to confirm removal
@@ -457,14 +562,43 @@ export default function Friends() {
 
       {/* Friends List */}
       {friends.length > 0 ? (
-        <div className="space-y-2">
-          {friends.map(friend => (
+        <div>
+          {dragIdx !== null && (
+            <p className="text-primary/60 text-[10px] font-display font-bold uppercase text-center mb-2 animate-pulse">
+              Drag to reorder
+            </p>
+          )}
+          <div
+            ref={listRef}
+            className="space-y-2"
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+          {friends.map((friend, idx) => (
             <div
               key={friend.id}
-              onClick={() => navigate(`/friends/${friend.id}`)}
-              className="flex items-center justify-between py-3 px-4 bg-dark-800 border border-dark-600 rounded-xl cursor-pointer active:scale-[0.98] transition-transform"
+              onTouchStart={(e) => handleTouchStart(idx, e)}
+              onClick={() => { if (dragIdx === null) navigate(`/friends/${friend.id}`); }}
+              className={`flex items-center justify-between py-3 px-4 bg-dark-800 border rounded-xl cursor-pointer transition-all ${
+                dragIdx === idx ? 'border-primary/60 bg-primary/10 scale-[1.02] shadow-lg shadow-primary/10 z-10 relative' :
+                dragIdx !== null && overIdx === idx ? 'border-primary/30 bg-primary/5' :
+                'border-dark-600 active:scale-[0.98]'
+              }`}
             >
               <div className="flex items-center gap-3">
+                {/* Drag handle — visible during drag mode */}
+                {dragIdx !== null && (
+                  <div className="text-gray-500 mr-1">
+                    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
+                      <circle cx="9" cy="6" r="1.5" />
+                      <circle cx="15" cy="6" r="1.5" />
+                      <circle cx="9" cy="12" r="1.5" />
+                      <circle cx="15" cy="12" r="1.5" />
+                      <circle cx="9" cy="18" r="1.5" />
+                      <circle cx="15" cy="18" r="1.5" />
+                    </svg>
+                  </div>
+                )}
                 {friend.profile_photo ? (
                   <img src={friend.profile_photo} alt="" className="w-11 h-11 rounded-full object-cover" />
                 ) : (
@@ -482,23 +616,28 @@ export default function Friends() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={(e) => handleRemoveFriend(friend.id, e)}
-                  className="text-red-400/60 hover:text-red-400 transition-colors p-1.5"
-                  title="Remove friend"
-                >
-                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                    <circle cx="8.5" cy="7" r="4" />
-                    <line x1="18" y1="11" x2="23" y2="11" />
-                  </svg>
-                </button>
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
+                {dragIdx === null && (
+                  <>
+                    <button
+                      onClick={(e) => handleRemoveFriend(friend.id, e)}
+                      className="text-red-400/60 hover:text-red-400 transition-colors p-1.5"
+                      title="Remove friend"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                        <circle cx="8.5" cy="7" r="4" />
+                        <line x1="18" y1="11" x2="23" y2="11" />
+                      </svg>
+                    </button>
+                    <svg viewBox="0 0 24 24" className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </>
+                )}
               </div>
             </div>
           ))}
+          </div>
         </div>
       ) : searchQuery.trim().length < 2 ? (
         <div className="card text-center py-10">
