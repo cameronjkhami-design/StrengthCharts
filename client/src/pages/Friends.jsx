@@ -95,12 +95,12 @@ export default function Friends() {
         setSearchResults(prev => prev.map(u =>
           u.id === friendId ? { ...u, friend_status: 'accepted' } : u
         ));
-        addNotification(`You and ${name} are now friends!`, 'friend');
+        addNotification(`You and ${name} are now friends!`, 'info');
       } else {
         setSearchResults(prev => prev.map(u =>
           u.id === friendId ? { ...u, friend_status: 'pending_sent' } : u
         ));
-        addNotification(`Friend request sent to ${name}`, 'friend');
+        addNotification(`Friend request sent to ${name}`, 'info');
       }
     } catch (err) {
       console.error(err);
@@ -114,7 +114,7 @@ export default function Friends() {
       await api.acceptFriend(user.id, friendId);
       setPendingRequests(prev => prev.filter(r => r.id !== friendId));
       loadFriends();
-      addNotification(`${name} added as friend!`, 'friend');
+      addNotification(`${name} added as friend!`, 'info');
     } catch (err) {
       console.error(err);
     }
