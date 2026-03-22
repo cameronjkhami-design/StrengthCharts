@@ -47,7 +47,7 @@ async function request(path, options = {}) {
       setAuthToken(null);
       localStorage.removeItem('sc_user');
       window.location.href = '/login';
-      return;
+      throw new Error('Session expired');
     }
     throw new Error(data.error || 'Request failed');
   }
