@@ -105,6 +105,16 @@ async function initDb() {
   } catch (e) {
     // Column already exists — ignore
   }
+  try {
+    await db.execute({ sql: "ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'local'", args: [] });
+  } catch (e) {
+    // Column already exists — ignore
+  }
+  try {
+    await db.execute({ sql: "ALTER TABLE users ADD COLUMN auth_provider_id TEXT", args: [] });
+  } catch (e) {
+    // Column already exists — ignore
+  }
 }
 
 module.exports = { db, initDb };

@@ -43,7 +43,7 @@ async function request(path, options = {}) {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     // Auto-logout on 401 (expired/invalid token) — skip for login/signup routes
-    if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/signup')) {
+    if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/signup') && !path.startsWith('/auth/oauth')) {
       setAuthToken(null);
       localStorage.removeItem('sc_user');
       window.location.href = '/login';
@@ -64,6 +64,9 @@ export const api = {
   updateUser: (id, data) => request(`/auth/user/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updatePremiumStatus: (id, is_premium) => request(`/auth/user/${id}/premium`, { method: 'PUT', body: JSON.stringify({ is_premium }) }),
   deleteAccount: (id, pin) => request(`/auth/user/${id}`, { method: 'DELETE', body: JSON.stringify({ pin }) }),
+  oauthApple: (id_token) => request('/auth/oauth/apple', { method: 'POST', body: JSON.stringify({ id_token }) }),
+  oauthGoogle: (id_token) => request('/auth/oauth/google', { method: 'POST', body: JSON.stringify({ id_token }) }),
+  oauthSetPin: (pin) => request('/auth/oauth/set-pin', { method: 'POST', body: JSON.stringify({ pin }) }),
 
   // Lifts
   getLifts: (userId) => request(`/lifts/${userId}`),

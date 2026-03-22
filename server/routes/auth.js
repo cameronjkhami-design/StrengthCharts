@@ -3,9 +3,15 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { Resend } = require('resend');
 const rateLimit = require('express-rate-limit');
+const appleSignin = require('apple-signin-auth');
+const { OAuth2Client } = require('google-auth-library');
 const { db } = require('../db');
 const { generateToken, authenticateToken } = require('../middleware/auth');
 const router = express.Router();
+
+const APPLE_CLIENT_ID = process.env.APPLE_CLIENT_ID || 'com.strengthcharts.app';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.RESEND_FROM || 'StrengthCharts <onboarding@resend.dev>';
@@ -356,6 +362,142 @@ router.delete('/user/:id', authenticateToken, async (req, res) => {
   await db.execute({ sql: 'DELETE FROM users WHERE id = ?', args: [userId] });
 
   res.json({ message: 'Account deleted successfully' });
+});
+
+// ─── OAuth helpers ───
+
+const USER_SELECT_COLS = 'id, username, display_name, email, unit_pref, is_premium, premium_purchased_at, privacy_settings, theme_color, sex, profile_photo, showcase_badges, auth_provider, created_at';
+
+async function findOrCreateOAuthUser(provider, providerId, email, displayName) {
+  // 1. Check if user already exists with this provider+id
+  const existing = await db.execute({
+    sql: 'SELECT ' + USER_SELECT_COLS + ', pin_hash FROM users WHERE auth_provider = ? AND auth_provider_id = ?',
+    args: [provider, providerId]
+  });
+  if (existing.rows.length > 0) {
+    const user = existing.rows[0];
+    const needsPin = user.pin_hash === 'OAUTH_PENDING';
+    const { pin_hash, ...safeUser } = user;
+    return { user: safeUser, needsPin, isNew: false };
+  }
+
+  // 2. Check if email matches an existing account — link it
+  if (email) {
+    const byEmail = await db.execute({
+      sql: 'SELECT ' + USER_SELECT_COLS + ', pin_hash FROM users WHERE email = ?',
+      args: [email.toLowerCase()]
+    });
+    if (byEmail.rows.length > 0) {
+      const user = byEmail.rows[0];
+      await db.execute({
+        sql: 'UPDATE users SET auth_provider = ?, auth_provider_id = ? WHERE id = ?',
+        args: [provider, providerId, user.id]
+      });
+      const needsPin = user.pin_hash === 'OAUTH_PENDING';
+      const { pin_hash, ...safeUser } = { ...user, auth_provider: provider };
+      return { user: safeUser, needsPin, isNew: false };
+    }
+  }
+
+  // 3. Create new user
+  const username = `${provider}_${providerId.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '')}`.toLowerCase();
+  // Ensure unique username
+  let finalUsername = username;
+  let attempt = 0;
+  while (true) {
+    const check = await db.execute({ sql: 'SELECT id FROM users WHERE username = ?', args: [finalUsername] });
+    if (check.rows.length === 0) break;
+    attempt++;
+    finalUsername = `${username}${attempt}`;
+  }
+
+  const result = await db.execute({
+    sql: 'INSERT INTO users (username, pin_hash, display_name, email, auth_provider, auth_provider_id) VALUES (?, ?, ?, ?, ?, ?)',
+    args: [finalUsername, 'OAUTH_PENDING', displayName || finalUsername, email ? email.toLowerCase() : null, provider, providerId]
+  });
+
+  const newUser = await db.execute({
+    sql: 'SELECT ' + USER_SELECT_COLS + ' FROM users WHERE id = ?',
+    args: [Number(result.lastInsertRowid)]
+  });
+
+  return { user: newUser.rows[0], needsPin: true, isNew: true };
+}
+
+// POST /api/auth/oauth/apple
+router.post('/oauth/apple', async (req, res) => {
+  const { id_token } = req.body;
+  if (!id_token) return res.status(400).json({ error: 'id_token required' });
+
+  try {
+    const decoded = await appleSignin.verifyIdToken(id_token, {
+      audience: APPLE_CLIENT_ID,
+      ignoreExpiration: false,
+    });
+
+    const { sub, email } = decoded;
+    if (!sub) return res.status(400).json({ error: 'Invalid Apple token' });
+
+    const { user, needsPin } = await findOrCreateOAuthUser('apple', sub, email, null);
+    const token = generateToken(user.id);
+    res.json({ user, token, needs_pin: needsPin });
+  } catch (err) {
+    console.error('Apple OAuth error:', err);
+    res.status(401).json({ error: 'Apple sign-in failed' });
+  }
+});
+
+// POST /api/auth/oauth/google
+router.post('/oauth/google', async (req, res) => {
+  const { id_token } = req.body;
+  if (!id_token) return res.status(400).json({ error: 'id_token required' });
+
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: id_token,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { sub, email, name } = payload;
+    if (!sub) return res.status(400).json({ error: 'Invalid Google token' });
+
+    const { user, needsPin } = await findOrCreateOAuthUser('google', sub, email, name);
+    const token = generateToken(user.id);
+    res.json({ user, token, needs_pin: needsPin });
+  } catch (err) {
+    console.error('Google OAuth error:', err);
+    res.status(401).json({ error: 'Google sign-in failed' });
+  }
+});
+
+// POST /api/auth/oauth/set-pin — set PIN after first OAuth sign-in
+router.post('/oauth/set-pin', authenticateToken, async (req, res) => {
+  const { pin } = req.body;
+  if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+    return res.status(400).json({ error: 'PIN must be exactly 6 digits' });
+  }
+
+  // Only allow setting PIN if currently OAUTH_PENDING
+  const userResult = await db.execute({
+    sql: 'SELECT pin_hash FROM users WHERE id = ?',
+    args: [req.userId]
+  });
+  if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+  if (userResult.rows[0].pin_hash !== 'OAUTH_PENDING') {
+    return res.status(400).json({ error: 'PIN already set' });
+  }
+
+  const pinHash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
+  await db.execute({
+    sql: 'UPDATE users SET pin_hash = ? WHERE id = ?',
+    args: [pinHash, req.userId]
+  });
+
+  const updated = await db.execute({
+    sql: 'SELECT ' + USER_SELECT_COLS + ' FROM users WHERE id = ?',
+    args: [req.userId]
+  });
+  res.json({ user: updated.rows[0] });
 });
 
 module.exports = router;
