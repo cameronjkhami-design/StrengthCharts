@@ -7,7 +7,6 @@ const PremiumContext = createContext(null);
 export const PREMIUM_FEATURES = {
   FRIEND_LEADERBOARD: 'friend_leaderboard',
   STRENGTH_BW_RATIO_CHART: 'strength_bw_ratio_chart',
-  EXPORT_PR_DATA: 'export_pr_data',
   OVERLAY_CHARTS: 'overlay_charts',
   BW_TRENDLINE: 'bw_trendline',
   ACHIEVEMENTS: 'achievements',

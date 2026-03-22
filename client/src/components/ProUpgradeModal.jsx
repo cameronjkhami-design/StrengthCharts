@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { usePurchases } from '../hooks/usePurchases';
 import { usePremium } from '../context/PremiumContext';
-import { useAds } from '../hooks/useAds';
+
 
 const FEATURES = [
   'Friend leaderboard — compete with your crew',
   'Bodyweight trendline chart',
   'Achievements & profile badges',
   'Strength-to-bodyweight ratio trend charts',
-  'Export your PR data',
   'Overlay multiple exercise charts',
   'No ads — ever',
 ];
@@ -21,33 +20,10 @@ const PLANS = [
 
 export default function ProUpgradeModal({ isOpen, onClose }) {
   const { product, purchasing, restoring, purchasePro, restorePurchases, isNative } = usePurchases();
-  const { isPremium, unlockFeatureTemporarily } = usePremium();
+  const { isPremium } = usePremium();
   const [selectedPlan, setSelectedPlan] = useState('annual');
 
-  // Try to use ads hook if available
-  let watchAd = null;
-  try {
-    const ads = useAds();
-    watchAd = ads?.showRewardedAd;
-  } catch {}
-
   if (!isOpen) return null;
-
-  const handleWatchAd = async () => {
-    if (watchAd) {
-      const success = await watchAd();
-      if (success) {
-        // Unlock all features for 24 hours
-        unlockFeatureTemporarily('friend_leaderboard');
-        unlockFeatureTemporarily('strength_bw_ratio_chart');
-        unlockFeatureTemporarily('export_pr_data');
-        unlockFeatureTemporarily('overlay_charts');
-        unlockFeatureTemporarily('bw_trendline');
-        unlockFeatureTemporarily('achievements');
-        onClose();
-      }
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-black/85 z-[100] flex items-end sm:items-center justify-center" onClick={onClose}>
@@ -142,15 +118,6 @@ export default function ProUpgradeModal({ isOpen, onClose }) {
                 ? 'Processing...'
                 : `Upgrade — ${PLANS.find(p => p.id === selectedPlan)?.price || '...'}`}
             </button>
-
-            {watchAd && (
-              <button
-                onClick={handleWatchAd}
-                className="w-full py-3 rounded-xl bg-dark-700 border border-dark-500 text-gray-300 font-display font-bold text-sm uppercase mb-3 active:scale-95 transition-transform"
-              >
-                Watch Ad — Unlock 24hrs Free
-              </button>
-            )}
 
             <button
               onClick={restorePurchases}
